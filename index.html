@@ -1,0 +1,1486 @@
+<!doctype html>
+<!--
+  囤囤の森 — 隨手收藏網路上的影片、文章、貼文
+  版本：v1.0.0（2026-10-31）
+
+  更新紀錄（最近三版，完整紀錄見規格檔）
+  v1.0.0（2026-10-31）
+    【新增】第一版：從其他 App 分享就能存、待整理（左右滑）、糧倉（搜尋與篩選）、嗑一顆（隨機挑一則）
+    【新增】多選兩層標籤、看過與心得、看完回來時詢問、貼上多個連結匯入、備份匯出
+    【新增】離線也能存；設定 Google 試算表後手機與電腦自動同步
+-->
+<html lang="zh-Hant">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#23314F">
+<meta name="description" content="隨手收藏網路上的影片、文章、貼文">
+<title>囤囤の森 v1.0.0</title>
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" href="icon-192.png">
+<link rel="apple-touch-icon" href="icon-192.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;500;900&family=Baloo+2:wght@600;800&display=swap">
+<style>
+:root{
+  --night:#23314F; --night2:#33456B; --night3:#1A2540;
+  --grain:#F2B630; --grain2:#E2A21C; --grain3:#F7C552;
+  --leaf:#4F9D69; --danger:#B4373D;
+  --panel:#FAF8F2; --card:#FFFFFF; --line:#EFE9DA; --line2:#E2DBC8;
+  --ink:#23314F; --muted:#5B6680; --faint:#7A8399; --chip:#E9ECF3;
+  --top-ink:#FAF8F2; --top-muted:#C9D2E6;
+  --num:'Baloo 2', 'Noto Sans TC', system-ui, sans-serif;
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    --night:#151D30; --night2:#26324F; --night3:#0E1424;
+    --panel:#1C2438; --card:#243050; --line:#2E3A57; --line2:#3A4766;
+    --ink:#ECEFF6; --muted:#A3ADC4; --faint:#8590A8; --chip:#2E3A57;
+  }
+}
+:root[data-theme="dark"]{
+  --night:#151D30; --night2:#26324F; --night3:#0E1424;
+  --panel:#1C2438; --card:#243050; --line:#2E3A57; --line2:#3A4766;
+  --ink:#ECEFF6; --muted:#A3ADC4; --faint:#8590A8; --chip:#2E3A57;
+}
+*{box-sizing:border-box}
+html,body{margin:0;background:var(--night);color:var(--top-ink);font-family:'Noto Sans TC',system-ui,sans-serif;-webkit-tap-highlight-color:transparent}
+button,input,textarea,select{font-family:inherit;font-size:inherit;color:inherit}
+button{cursor:pointer}
+:focus-visible{outline:3px solid var(--grain);outline-offset:2px}
+.app{max-width:520px;margin:0 auto;min-height:100dvh;position:relative;display:flex;flex-direction:column}
+.scr{display:none;flex:1;flex-direction:column;min-height:100dvh}
+.scr.on{display:flex}
+.top{padding:calc(18px + env(safe-area-inset-top)) 20px 0}
+.top-row{display:flex;align-items:center;justify-content:space-between;gap:8px}
+.top h1{margin:0;font-size:24px;font-weight:900;letter-spacing:.02em}
+.top-sub{font-size:13px;color:var(--top-muted);margin-top:4px}
+.ver{border:none;background:transparent;color:var(--top-muted);font-size:11px;padding:6px 4px;min-height:32px}
+.sync{display:inline-flex;align-items:center;gap:6px;font-size:12px;color:var(--top-muted);border:none;background:transparent;min-height:32px;padding:0 4px}
+.dot{width:8px;height:8px;border-radius:50%;background:var(--faint)}
+.dot.ok{background:var(--leaf)} .dot.wait{background:var(--grain)} .dot.bad{background:#E0656B}
+.pill-btn{min-height:40px;padding:0 14px;border:none;border-radius:20px;background:var(--grain);color:#23314F;font-weight:900;font-size:14px;display:inline-flex;align-items:center;gap:6px}
+.pill-ghost{min-height:40px;padding:0 14px;border:none;border-radius:20px;background:var(--night2);color:var(--top-ink);font-size:14px}
+.panel{flex:1;margin-top:16px;background:var(--panel);color:var(--ink);border-radius:28px 28px 0 0;padding:16px 0 calc(150px + env(safe-area-inset-bottom))}
+.hint{font-size:13px;color:var(--muted);padding:0 20px 10px}
+
+/* 待整理：種子堆 */
+.pile-wrap{margin:12px 22px 0;display:flex;align-items:flex-end;gap:16px}
+.pile{position:relative;width:130px;height:80px;flex:none}
+.pile .ground{position:absolute;left:4px;right:4px;bottom:0;height:6px;border-radius:50%;background:var(--night3)}
+.seed{position:absolute;width:26px;height:20px;border-radius:50%;transition:opacity .3s}
+.big-num{font-family:var(--num);font-size:52px;font-weight:800;line-height:.9;color:var(--grain)}
+
+/* 列 */
+.row{position:relative;margin:0 12px 10px;border-radius:18px;overflow:hidden}
+.row-bg{position:absolute;inset:0;display:flex;align-items:center;justify-content:space-between;padding:0 18px;font-size:14px;font-weight:900;opacity:0}
+.row.go-r .row-bg{opacity:1;background:var(--leaf);color:#fff}
+.row.go-l .row-bg{opacity:1;background:var(--grain);color:#23314F}
+.row.go-r .bg-l,.row.go-l .bg-r{visibility:hidden}
+.bg-r,.bg-l{display:flex;align-items:center;gap:8px}
+.row-fg{position:relative;background:var(--card);border:2px solid var(--line);border-radius:18px;display:flex;gap:12px;align-items:center;padding:10px;min-height:84px;touch-action:pan-y;user-select:none;-webkit-user-select:none;cursor:pointer;transition:transform .22s ease}
+.row.dragging .row-fg{transition:none}
+.thumb{position:relative;width:60px;height:60px;border-radius:14px;background:var(--line2);flex:none;overflow:hidden}
+.thumb img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover}
+.src{position:absolute;left:5px;bottom:5px;font-size:10px;font-weight:900;background:var(--night);color:#FAF8F2;border-radius:6px;padding:1px 5px;z-index:1}
+.row-txt{display:flex;flex-direction:column;gap:4px;min-width:0;flex:1}
+.row-title{font-size:15px;font-weight:500;line-height:1.35;overflow:hidden;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;word-break:break-word}
+.row-title.empty{color:var(--faint)}
+.row-meta{font-size:12px;color:var(--muted);display:flex;flex-wrap:wrap;gap:4px 8px;align-items:center}
+.row.seen .thumb,.row.seen .row-txt{opacity:.62}
+.badge-seen{flex:none;background:var(--grain);color:#23314F;border-radius:10px;padding:2px 8px;font-size:12px;font-weight:900}
+.tag{font-size:11px;background:var(--chip);color:var(--ink);border-radius:8px;padding:1px 7px}
+.note-line{font-size:13px;color:var(--muted);line-height:1.4;border-left:3px solid var(--grain);padding-left:8px;overflow:hidden;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical}
+.more{display:none;flex:none;width:40px;height:40px;border:none;border-radius:20px;background:transparent;color:var(--muted);align-items:center;justify-content:center}
+@media (hover:hover){.more{display:flex}.more:hover{background:var(--line)}}
+.empty-box{padding:36px 24px;text-align:center;color:var(--muted);font-size:14px;line-height:1.7}
+.empty-box b{color:var(--ink)}
+
+/* 糧倉 */
+.search{margin:12px 20px 0;position:relative}
+.search svg{position:absolute;left:14px;top:13px}
+.search input{width:100%;min-height:44px;border:none;border-radius:22px;padding:0 16px 0 40px;font-size:15px;background:#FAF8F2;color:#23314F}
+.chip-row{display:flex;overflow-x:auto;gap:8px;padding:12px 20px 2px;scrollbar-width:none}
+.chip-row::-webkit-scrollbar{display:none}
+.chip-top{flex:none;min-height:40px;padding:0 14px;border-radius:20px;border:2px solid var(--night2);background:transparent;color:var(--top-ink);font-size:14px;font-weight:900;display:flex;align-items:center;gap:6px}
+.chip-top.on{background:var(--grain);border-color:var(--grain);color:#23314F}
+.chip-top small{font-family:var(--num);font-size:13px;font-weight:600;opacity:.8}
+.sub-row{display:flex;flex-wrap:wrap;gap:6px;padding:0 16px 10px}
+.bar{display:flex;justify-content:space-between;align-items:center;padding:0 16px 10px;gap:8px}
+.seg{display:flex;background:var(--line);border-radius:18px;padding:3px}
+.seg button{min-height:34px;padding:0 12px;border:none;border-radius:15px;background:transparent;color:var(--ink);font-size:13px}
+.seg button.on{background:var(--card);font-weight:900}
+.link-btn{min-height:34px;border:none;background:transparent;color:var(--muted);font-size:13px}
+.show-more{display:block;margin:6px auto 0;min-height:44px;padding:0 20px;border:2px solid var(--line2);border-radius:22px;background:transparent;color:var(--ink)}
+
+/* 標籤 chip（面板裡） */
+.chip{min-height:40px;padding:0 14px;border-radius:20px;border:2px solid var(--line2);background:var(--card);color:var(--ink);font-size:14px}
+.chip.l1{font-weight:900;min-height:44px;padding:0 16px;border-radius:22px;font-size:15px}
+.chip.sm{min-height:36px;padding:0 12px;font-size:13px;border-radius:18px}
+.chip.on{background:var(--ink);border-color:var(--ink);color:var(--panel)}
+.chip.part{background:var(--chip);border-color:var(--ink)}
+.chip.dash{border-style:dashed;background:transparent;color:var(--muted)}
+
+/* 嗑一顆 */
+.snack{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:16px 20px calc(110px + env(safe-area-inset-bottom));gap:18px}
+.snack-card{width:100%;background:var(--panel);color:var(--ink);border-radius:28px;padding:18px;display:flex;flex-direction:column;gap:12px;transition:transform .25s}
+.snack-img{position:relative;height:180px;border-radius:18px;background:var(--line2);overflow:hidden}
+.snack-img img{width:100%;height:100%;object-fit:cover}
+.snack-title{font-size:19px;font-weight:900;line-height:1.4;word-break:break-word}
+.snack-age{display:flex;align-items:center;gap:8px;font-size:13px;color:var(--muted)}
+.snack-age b{font-family:var(--num);font-size:22px;font-weight:800;color:var(--grain2);line-height:1}
+.snack-btns{width:100%;display:flex;gap:10px}
+.btn-big{flex:1;min-height:54px;border:none;border-radius:27px;font-size:16px;font-weight:900}
+.btn-big.ghost{background:transparent;border:2px solid #4A5D86;color:var(--top-ink)}
+.btn-big.grain{flex:1.4;background:var(--grain);color:#23314F}
+.toggle-chip{min-height:36px;padding:0 12px;border-radius:18px;border:2px solid var(--night2);background:transparent;color:var(--top-ink);font-size:13px}
+.toggle-chip.on{border-color:var(--grain)}
+
+/* 設定 */
+.card{margin:0 12px 12px;background:var(--card);border:2px solid var(--line);border-radius:20px;padding:16px}
+.card h2{margin:0 0 10px;font-size:16px;font-weight:900}
+.card p{margin:0 0 10px;font-size:13px;color:var(--muted);line-height:1.6}
+.field{display:flex;flex-direction:column;gap:6px;margin-bottom:10px}
+.field label{font-size:13px;color:var(--muted)}
+.input{min-height:46px;border:2px solid var(--line2);border-radius:14px;padding:0 12px;font-size:15px;background:var(--panel);color:var(--ink);width:100%}
+textarea.input{padding:10px 12px;min-height:90px;resize:vertical;line-height:1.5}
+.btn{min-height:46px;padding:0 18px;border:none;border-radius:23px;background:var(--ink);color:var(--panel);font-weight:900;font-size:15px}
+.btn.leaf{background:var(--leaf);color:#fff}
+.btn.line{background:transparent;border:2px solid var(--line2);color:var(--ink);font-weight:500}
+.btn.danger{background:transparent;border:2px solid var(--danger);color:var(--danger);font-weight:500}
+.btns{display:flex;flex-wrap:wrap;gap:8px}
+.opt{display:flex;flex-direction:column;align-items:flex-start;gap:2px;width:100%;min-height:52px;padding:8px 14px;margin-bottom:8px;border-radius:16px;border:2px solid var(--line2);background:transparent;color:var(--ink);text-align:left}
+.opt b{font-size:15px}
+.opt span{font-size:12px;color:var(--muted)}
+.opt.on{border-color:var(--ink);background:var(--panel)}
+.tag-tree{display:flex;flex-direction:column;gap:10px}
+.tt-l1{border:2px solid var(--line);border-radius:14px;padding:10px}
+.tt-head{display:flex;align-items:center;gap:6px}
+.tt-head b{flex:1;font-size:15px}
+.tt-kids{display:flex;flex-wrap:wrap;gap:6px;margin-top:8px}
+.tt-kid{display:inline-flex;align-items:center;gap:2px;background:var(--chip);border-radius:16px;padding:0 4px 0 12px;min-height:34px;font-size:13px}
+.icon-btn{width:36px;height:36px;border:none;border-radius:18px;background:transparent;color:var(--muted);display:inline-flex;align-items:center;justify-content:center;font-size:15px}
+.icon-btn:hover{background:var(--line)}
+.small{font-size:12px;color:var(--muted);line-height:1.6}
+.bookmarklet{display:inline-flex;align-items:center;min-height:40px;padding:0 14px;border-radius:20px;background:var(--grain);color:#23314F;font-weight:900;text-decoration:none}
+.foot{text-align:center;padding:4px 0 20px}
+
+/* 底部導覽 */
+.tabbar{position:fixed;left:50%;transform:translateX(-50%);bottom:calc(10px + env(safe-area-inset-bottom));width:min(496px,calc(100% - 24px));height:60px;background:var(--night);border-radius:30px;display:grid;grid-template-columns:repeat(4,1fr);z-index:20;box-shadow:0 0 0 2px var(--night2)}
+.tabbar button{border:none;background:transparent;color:var(--top-muted);font-size:12px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;position:relative}
+.tabbar button.on{color:var(--grain);font-weight:900}
+.tab-badge{position:absolute;top:6px;left:calc(50% + 8px);min-width:18px;height:18px;border-radius:9px;background:var(--grain);color:#23314F;font-size:11px;font-weight:900;font-family:var(--num);display:flex;align-items:center;justify-content:center;padding:0 5px}
+
+/* 面板、提示 */
+.scrim{position:fixed;inset:0;background:rgba(14,20,36,.55);z-index:40;display:flex;align-items:flex-end;justify-content:center}
+.sheet{width:min(520px,100%);max-height:92dvh;overflow-y:auto;background:var(--panel);color:var(--ink);border-radius:28px 28px 0 0;padding:20px 20px calc(24px + env(safe-area-inset-bottom));display:flex;flex-direction:column;gap:12px;animation:up .2s ease}
+@keyframes up{from{transform:translateY(24px);opacity:.6}to{transform:none;opacity:1}}
+.sheet h3{margin:0;font-size:17px;font-weight:900;line-height:1.4;word-break:break-word}
+.sheet .lbl{font-size:13px;color:var(--muted)}
+.groups{display:flex;flex-direction:column;gap:8px}
+.group{display:flex;flex-wrap:wrap;gap:6px;align-items:center}
+.switch{display:flex;align-items:center;justify-content:space-between;min-height:52px;padding:0 14px;border:2px solid var(--line2);border-radius:18px;background:var(--card);color:var(--ink);font-size:15px;width:100%}
+.track{width:48px;height:28px;border-radius:14px;background:var(--line2);position:relative;transition:background .2s;flex:none}
+.track i{position:absolute;top:3px;left:3px;width:22px;height:22px;border-radius:50%;background:#fff;transition:left .2s}
+.switch[aria-pressed="true"] .track{background:var(--leaf)}
+.switch[aria-pressed="true"] .track i{left:23px}
+.hide{display:none !important}
+.toast{position:fixed;left:50%;transform:translateX(-50%);bottom:calc(80px + env(safe-area-inset-bottom));width:min(496px,calc(100% - 24px));z-index:30;background:var(--night);color:#FAF8F2;border:2px solid var(--leaf);border-radius:22px;padding:8px 8px 8px 18px;display:flex;justify-content:space-between;align-items:center;gap:6px;animation:up .2s ease}
+.toast span{font-size:13px;line-height:1.4}
+.toast-acts{display:flex;flex:none}
+.toast-acts button{min-height:40px;padding:0 10px;border:none;background:transparent;color:var(--grain);font-size:14px;font-weight:900}
+.prompt{position:fixed;left:50%;transform:translateX(-50%);bottom:calc(80px + env(safe-area-inset-bottom));width:min(496px,calc(100% - 24px));z-index:31;background:var(--card);color:var(--ink);border:2px solid var(--ink);border-radius:22px;padding:14px 16px;display:flex;flex-direction:column;gap:10px;animation:up .2s ease}
+.prompt-btns{display:flex;gap:8px}
+.prompt-btns button{flex:1;min-height:44px;border:none;border-radius:22px;font-size:14px;font-weight:900}
+.p-seen{background:var(--grain);color:#23314F}
+.p-org{background:var(--leaf);color:#fff}
+.p-later{background:transparent !important;border:2px solid var(--line2) !important;color:var(--muted);font-weight:500 !important}
+@media (prefers-reduced-motion:reduce){*{animation:none !important;transition:none !important}}
+</style>
+</head>
+<body>
+<div class="app">
+
+  <!-- 待整理 -->
+  <section class="scr" id="scr-inbox" aria-label="待整理">
+    <div class="top">
+      <div class="top-row">
+        <h1>囤囤の森</h1>
+        <div style="display:flex;align-items:center;gap:2px">
+          <button class="sync" id="syncBtn" type="button"><span class="dot" id="syncDot"></span><span id="syncText">只存本機</span></button>
+          <button class="ver" type="button" data-act="changelog" id="verBtn">v</button>
+        </div>
+      </div>
+      <div class="pile-wrap">
+        <div class="pile" role="img" id="pile" aria-label="">
+          <div class="ground"></div>
+        </div>
+        <div style="display:flex;flex-direction:column;gap:2px;padding-bottom:4px;flex:1">
+          <span class="big-num" id="inboxNum">0</span>
+          <span style="font-size:14px;color:var(--top-muted)" id="inboxNumText">顆還沒整理</span>
+        </div>
+        <button class="pill-btn" type="button" data-act="add" aria-label="貼上連結">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg>存
+        </button>
+      </div>
+    </div>
+    <div class="panel">
+      <div class="hint" id="inboxHint">點一下打開　右滑分類　左滑看過</div>
+      <div id="inboxList"></div>
+    </div>
+  </section>
+
+  <!-- 糧倉 -->
+  <section class="scr" id="scr-granary" aria-label="糧倉">
+    <div class="top">
+      <div class="top-row">
+        <h1>糧倉</h1>
+        <span style="font-size:13px;color:var(--top-muted)">共 <span class="big-num" style="font-size:20px" id="granTotal">0</span> 顆</span>
+      </div>
+    </div>
+    <div class="search">
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#7A8399" stroke-width="2.2" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="M20 20l-4-4"/></svg>
+      <input id="granQ" type="search" placeholder="搜尋標題、心得、標籤" aria-label="搜尋糧倉" autocomplete="off">
+    </div>
+    <div class="chip-row" id="granL1"></div>
+    <div class="panel" style="margin-top:12px">
+      <div class="sub-row" id="granL2"></div>
+      <div class="bar">
+        <div class="seg" id="granStatus"></div>
+        <button class="link-btn" type="button" id="granSort"></button>
+      </div>
+      <div class="hint" style="padding-top:0">點一下打開　右滑編輯　左滑切換看過</div>
+      <div id="granList"></div>
+    </div>
+  </section>
+
+  <!-- 嗑一顆 -->
+  <section class="scr" id="scr-snack" aria-label="嗑一顆">
+    <div class="top">
+      <h1>嗑一顆</h1>
+      <div class="top-sub">從糧倉隨機拿一顆，存了別忘了吃</div>
+    </div>
+    <div class="chip-row" id="snackL1" style="padding-top:14px"></div>
+    <div style="display:flex;gap:8px;padding:10px 20px 0;flex-wrap:wrap">
+      <button class="toggle-chip" type="button" id="snackTodo" aria-pressed="true"></button>
+      <button class="toggle-chip" type="button" id="snackOld" aria-pressed="false"></button>
+    </div>
+    <div class="snack" id="snackBox"></div>
+  </section>
+
+  <!-- 設定 -->
+  <section class="scr" id="scr-settings" aria-label="設定">
+    <div class="top"><h1>設定</h1></div>
+    <div class="panel" id="setPanel"></div>
+  </section>
+</div>
+
+<nav class="tabbar" aria-label="主要導覽">
+  <button type="button" data-go="inbox">待整理<span class="tab-badge hide" id="tabBadge"></span></button>
+  <button type="button" data-go="granary">糧倉</button>
+  <button type="button" data-go="snack">嗑一顆</button>
+  <button type="button" data-go="settings">設定</button>
+</nav>
+
+<div id="sheetRoot"></div>
+<div id="promptRoot"></div>
+<div id="toastRoot" role="status" aria-live="polite"></div>
+
+<script>
+'use strict';
+const APP_VERSION = '1.0.0';
+const CHANGELOG = [
+  { v: '1.0.0', d: '2026-10-31', lines: [
+    '【新增】第一版：從其他 App 分享就能存、待整理（左右滑）、糧倉（搜尋與篩選）、嗑一顆（隨機挑一則）',
+    '【新增】多選兩層標籤、看過與心得、看完回來時詢問、貼上多個連結匯入、備份匯出',
+    '【新增】離線也能存；設定 Google 試算表後手機與電腦自動同步'
+  ] }
+];
+
+/* ================= 小工具 ================= */
+const $ = (s, el = document) => el.querySelector(s);
+const $$ = (s, el = document) => [...el.querySelectorAll(s)];
+const esc = s => String(s == null ? '' : s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+const now = () => Date.now();
+const uid = () => now().toString(36) + Math.random().toString(36).slice(2, 8);
+const SEP = '／';
+const DAY = 86400000;
+function load(k, d) { try { const v = localStorage.getItem(k); return v ? JSON.parse(v) : d; } catch (e) { return d; } }
+function save(k, v) {
+  try { localStorage.setItem(k, JSON.stringify(v)); }
+  catch (e) { toast('手機空間不夠，存不進去。請先匯出備份或清掉一些收藏'); }
+}
+function fmtWhen(t) {
+  if (!t) return '';
+  const d = new Date(t), n = new Date();
+  const p = x => String(x).padStart(2, '0');
+  const sameDay = (a, b) => a.toDateString() === b.toDateString();
+  if (sameDay(d, n)) return '今天 ' + p(d.getHours()) + ':' + p(d.getMinutes());
+  if (sameDay(d, new Date(n - DAY))) return '昨天';
+  if (d.getFullYear() === n.getFullYear()) return (d.getMonth() + 1) + '/' + d.getDate();
+  return d.getFullYear() + '/' + (d.getMonth() + 1) + '/' + d.getDate();
+}
+const daysAgo = t => Math.max(0, Math.floor((now() - t) / DAY));
+const splitTag = p => { const i = p.indexOf(SEP); return i < 0 ? [p, ''] : [p.slice(0, i), p.slice(i + 1)]; };
+const ICON = {
+  check: '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" aria-hidden="true"><path d="M5 12l5 5 9-10"/></svg>',
+  home: '<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" aria-hidden="true"><path d="M4 10l8-6 8 6v10H4z"/></svg>',
+  eye: '<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" aria-hidden="true"><path d="M2 12s4-7 10-7 10 7 10 7-4 7-10 7S2 12 2 12z"/><circle cx="12" cy="12" r="3"/></svg>',
+  more: '<svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><circle cx="5" cy="12" r="2"/><circle cx="12" cy="12" r="2"/><circle cx="19" cy="12" r="2"/></svg>'
+};
+
+/* ================= 網址 ================= */
+const PLATS = [
+  [/(^|\.)(youtube\.com|youtu\.be)$/, 'YT', 'YouTube'],
+  [/(^|\.)instagram\.com$/, 'IG', 'Instagram'],
+  [/(^|\.)(facebook\.com|fb\.watch|fb\.com)$/, 'FB', 'Facebook'],
+  [/(^|\.)threads\.(net|com)$/, 'TH', 'Threads'],
+  [/(^|\.)(xiaohongshu\.com|xhslink\.com)$/, '紅', '小紅書'],
+  [/(^|\.)(twitter\.com|x\.com)$/, 'X', 'X'],
+  [/(^|\.)tiktok\.com$/, 'TT', 'TikTok'],
+  [/(^|\.)(bilibili\.com|b23\.tv)$/, 'B站', 'bilibili'],
+  [/(^|\.)medium\.com$/, 'M', 'Medium'],
+  [/(^|\.)github\.com$/, 'GH', 'GitHub']
+];
+function hostOf(u) { try { return new URL(u).hostname.toLowerCase().replace(/^(www|m|mobile)\./, ''); } catch (e) { return ''; } }
+function platOf(u) {
+  const h = hostOf(u);
+  for (const [re, code, name] of PLATS) if (re.test(h)) return { code, name };
+  return { code: '網', name: h || '網頁' };
+}
+function extractUrls(text) {
+  return (String(text || '').match(/https?:\/\/[^\s<>"'，。、「」（）()【】]+/g) || []).map(u => u.replace(/[.,;:!?…]+$/, ''));
+}
+function normUrl(raw) {
+  let u;
+  try { u = new URL(raw); } catch (e) { return String(raw || '').trim(); }
+  u.hash = '';
+  const h = u.hostname.toLowerCase().replace(/^(www|m|mobile)\./, '');
+  if (h === 'youtu.be') return 'https://youtube.com/watch?v=' + u.pathname.slice(1).split('/')[0];
+  if (/(^|\.)youtube\.com$/.test(h)) {
+    const v = u.searchParams.get('v');
+    if (v) return 'https://youtube.com/watch?v=' + v;
+    const m = u.pathname.match(/^\/(shorts|live|embed)\/([^/?]+)/);
+    if (m) return 'https://youtube.com/watch?v=' + m[2];
+  }
+  const drop = /^(utm_|fbclid|gclid|igshid|igsh|si$|feature$|mibextid|ref$|ref_src|s$|t$|share_|xsec_|app_platform|app_version|apptime|share_from|wechatwid|from$|spm|_branch)/i;
+  [...u.searchParams.keys()].forEach(k => { if (drop.test(k)) u.searchParams.delete(k); });
+  const q = u.searchParams.toString();
+  return 'https://' + h + u.pathname.replace(/\/+$/, '') + (q ? '?' + q : '');
+}
+function ytId(u) { const m = normUrl(u).match(/youtube\.com\/watch\?v=([\w-]{6,})/); return m ? m[1] : ''; }
+const GENERIC_TITLE = /^(instagram|facebook|threads|小红书|小紅書|x|tiktok|youtube|log ?in.*|登入.*|登录.*|sign up.*|error.*|你访问的页面不见了.*)$/i;
+
+/* ================= 資料 ================= */
+const DEFAULT_TAGS = [
+  { n: 'AI技巧', c: ['製圖', '程式', '作品分享'] },
+  { n: '職管', c: [] },
+  { n: '健身', c: [] },
+  { n: '料理', c: [] }
+];
+const S = {
+  items: load('tt_items', []),
+  shared: load('tt_shared', { tags: { value: DEFAULT_TAGS, updatedAt: 0 } }),
+  pref: Object.assign({ home: 'inbox', noteMode: 'toast', shareMode: 'quick', theme: 'system' }, load('tt_pref', {})),
+  sync: Object.assign({ url: '', key: '', since: 0, dirty: [], dirtySet: [], lastOk: 0, lastErr: '' }, load('tt_sync', {})),
+  recent: load('tt_recent', []),
+  metaTried: load('tt_meta', {}),
+  screen: 'inbox',
+  gran: { l1: '', l2: '', status: 'all', q: '', sort: 'new', limit: 60 },
+  snack: { l1: '', todo: true, old: false, cur: '', spin: 0 },
+  undo: null
+};
+const tagsTree = () => (S.shared.tags && Array.isArray(S.shared.tags.value)) ? S.shared.tags.value : [];
+const live = () => S.items.filter(x => !x.deleted);
+const byId = id => S.items.find(x => x.id === id);
+const inboxItems = () => live().filter(x => !(x.tags && x.tags.length)).sort((a, b) => b.savedAt - a.savedAt);
+
+let BATCH = false;
+function persistItems() { save('tt_items', S.items); }
+function persistSync() { save('tt_sync', S.sync); }
+function markDirty(id) { if (S.sync.dirty.indexOf(id) < 0) S.sync.dirty.push(id); if (!BATCH) persistSync(); }
+
+function putItem(it, quiet) {
+  it.updatedAt = now();
+  const i = S.items.findIndex(x => x.id === it.id);
+  if (i < 0) S.items.push(it); else S.items[i] = it;
+  if (!BATCH) persistItems();
+  markDirty(it.id);
+  scheduleSync();
+  if (!quiet) render();
+}
+function patchItem(id, patch, quiet) {
+  const it = byId(id);
+  if (!it) return null;
+  const before = JSON.parse(JSON.stringify(it));
+  putItem(Object.assign({}, it, patch), quiet);
+  return before;
+}
+function restore(before) { if (before) putItem(Object.assign({}, before)); }
+
+function setTags(tree) {
+  S.shared.tags = { value: tree, updatedAt: now() };
+  save('tt_shared', S.shared);
+  if (S.sync.dirtySet.indexOf('tags') < 0) S.sync.dirtySet.push('tags');
+  persistSync();
+  scheduleSync();
+}
+function pushRecent(paths) {
+  S.recent = paths.concat(S.recent.filter(r => paths.indexOf(r) < 0)).slice(0, 6);
+  save('tt_recent', S.recent);
+}
+function recentTags(n) {
+  const all = allPaths();
+  const r = S.recent.filter(p => all.indexOf(p) >= 0);
+  for (const p of all) { if (r.length >= n) break; if (r.indexOf(p) < 0) r.push(p); }
+  return r.slice(0, n);
+}
+function allPaths() {
+  const out = [];
+  tagsTree().forEach(t => { out.push(t.n); t.c.forEach(c => out.push(t.n + SEP + c)); });
+  return out;
+}
+function cleanTags(sel) { return sel.filter(p => !(p.indexOf(SEP) < 0 && sel.some(q => q.indexOf(p + SEP) === 0))); }
+
+/** 新增一個連結；回傳 { item, dup } */
+function addLink(url, title) {
+  const norm = normUrl(url);
+  const dup = live().find(x => x.norm === norm);
+  if (dup) return { item: dup, dup: true };
+  const p = platOf(url);
+  const yid = ytId(url);
+  const it = {
+    id: uid(), url: url, norm: norm, title: (title || '').trim().slice(0, 300), src: p.code,
+    thumb: yid ? 'https://i.ytimg.com/vi/' + yid + '/mqdefault.jpg' : '',
+    tags: [], seen: false, note: '', savedAt: now(), seenAt: 0, updatedAt: 0, deleted: false
+  };
+  putItem(it, true);
+  queueMeta(it.id);
+  return { item: it, dup: false };
+}
+
+/* ================= 畫面切換 ================= */
+function go(scr) {
+  S.screen = scr;
+  $$('.scr').forEach(el => el.classList.toggle('on', el.id === 'scr-' + scr));
+  $$('.tabbar button').forEach(b => b.classList.toggle('on', b.dataset.go === scr));
+  closePrompt(true);
+  render();
+  window.scrollTo(0, 0);
+}
+function render() {
+  renderBadge();
+  renderSync();
+  if (S.screen === 'inbox') renderInbox();
+  else if (S.screen === 'granary') renderGranary();
+  else if (S.screen === 'snack') renderSnack();
+  else if (S.screen === 'settings') renderSettings();
+}
+function renderBadge() {
+  const n = inboxItems().length;
+  const b = $('#tabBadge');
+  b.textContent = n > 99 ? '99+' : n;
+  b.classList.toggle('hide', n === 0 || S.screen === 'inbox');
+}
+
+/* ---------- 列 ---------- */
+function rowHtml(it, mode) {
+  const p = platOf(it.url);
+  const label = it.title || '（沒抓到標題，右滑補一句）';
+  const tags = mode === 'gran' ? (it.tags || []).map(t => '<span class="tag">' + esc(t) + '</span>').join('') : '';
+  const note = mode === 'gran' && it.note ? '<div class="note-line">' + esc(it.note) + '</div>' : '';
+  const lText = mode === 'gran' && it.seen ? '改成還沒看' : '看過';
+  const rText = mode === 'gran' ? '編輯' : '分類';
+  return '<div class="row' + (it.seen ? ' seen' : '') + '" data-id="' + esc(it.id) + '" data-mode="' + mode + '">' +
+    '<div class="row-bg"><span class="bg-r">' + ICON.home + '<em style="font-style:normal" data-r="' + rText + '">' + rText + '</em></span>' +
+    '<span class="bg-l"><em style="font-style:normal" data-l="' + lText + '">' + lText + '</em>' + ICON.eye + '</span></div>' +
+    '<div class="row-fg" data-id="' + esc(it.id) + '">' +
+      '<div class="thumb">' + (it.thumb ? '<img src="' + esc(it.thumb) + '" alt="" loading="lazy" referrerpolicy="no-referrer" onerror="this.remove()">' : '') + '<span class="src">' + esc(it.src || p.code) + '</span></div>' +
+      '<div class="row-txt"><div class="row-title' + (it.title ? '' : ' empty') + '">' + esc(label) + '</div>' + note +
+        '<div class="row-meta">' + tags + '<span>' + esc(p.name) + '　' + esc(fmtWhen(it.savedAt)) + '</span></div></div>' +
+      (it.seen ? '<span class="badge-seen">看過</span>' : '') +
+      '<button class="more" type="button" data-act="org" data-id="' + esc(it.id) + '" aria-label="整理這一則">' + ICON.more + '</button>' +
+    '</div></div>';
+}
+
+/* ---------- 待整理 ---------- */
+const SEED_POS = [[4,4],[30,3],[56,4],[82,3],[104,5],[17,20],[43,21],[69,20],[93,22],[30,37],[56,38],[80,38],[43,54],[67,55],[55,70]];
+const SEED_COL = ['var(--grain)', 'var(--grain2)', 'var(--grain3)'];
+function renderInbox() {
+  const list = inboxItems();
+  $('#inboxNum').textContent = list.length;
+  $('#inboxNumText').textContent = list.length ? '顆還沒整理' : '全部收好了';
+  const pile = $('#pile');
+  pile.setAttribute('aria-label', '還有 ' + list.length + ' 顆沒整理');
+  $$('.seed', pile).forEach(s => s.remove());
+  const n = Math.min(list.length, SEED_POS.length);
+  for (let i = 0; i < n; i++) {
+    const d = document.createElement('div');
+    d.className = 'seed';
+    d.style.left = SEED_POS[i][0] + 'px';
+    d.style.bottom = SEED_POS[i][1] + 'px';
+    d.style.background = SEED_COL[i % 3];
+    pile.appendChild(d);
+  }
+  $('#inboxHint').classList.toggle('hide', !list.length);
+  if (!list.length) {
+    const first = live().length === 0;
+    $('#inboxList').innerHTML = '<div class="empty-box">' + (first
+      ? '<b>還沒有收藏</b><br>在 YouTube、IG 等 App 按「分享」→ 選「囤囤の森」就能存。<br>（要先用 Chrome「安裝應用程式」才會出現在分享選單）<br>也可以按右上「存」貼上連結。'
+      : '全部收好了，糧倉滿滿。<br>到「嗑一顆」挑一則來看吧。') + '</div>';
+    return;
+  }
+  $('#inboxList').innerHTML = list.map(it => rowHtml(it, 'inbox')).join('');
+}
+
+/* ---------- 糧倉 ---------- */
+function inL1(it, l1) { return (it.tags || []).some(t => t === l1 || t.indexOf(l1 + SEP) === 0); }
+function renderGranary() {
+  const g = S.gran, all = live(), T = tagsTree();
+  $('#granTotal').textContent = all.length;
+  if ($('#granQ').value !== g.q) $('#granQ').value = g.q;
+  $('#granL1').innerHTML = '<button type="button" class="chip-top' + (g.l1 ? '' : ' on') + '" data-gl1="">全部<small>' + all.length + '</small></button>' +
+    '<button type="button" class="chip-top' + (g.l1 === '__none' ? ' on' : '') + '" data-gl1="__none">未分類<small>' + inboxItems().length + '</small></button>' +
+    T.map(t => '<button type="button" class="chip-top' + (g.l1 === t.n ? ' on' : '') + '" data-gl1="' + esc(t.n) + '">' + esc(t.n) + '<small>' + all.filter(it => inL1(it, t.n)).length + '</small></button>').join('');
+  const l1obj = T.find(t => t.n === g.l1);
+  $('#granL2').innerHTML = l1obj && l1obj.c.length
+    ? '<button type="button" class="chip sm' + (g.l2 ? '' : ' on') + '" data-gl2="">全部' + esc(l1obj.n) + '</button>' +
+      l1obj.c.map(c => '<button type="button" class="chip sm' + (g.l2 === c ? ' on' : '') + '" data-gl2="' + esc(c) + '">' + esc(c) + '</button>').join('')
+    : '';
+  $('#granL2').classList.toggle('hide', !(l1obj && l1obj.c.length));
+  $('#granStatus').innerHTML = [['all', '全部'], ['todo', '還沒看'], ['seen', '看過']]
+    .map(o => '<button type="button" class="' + (g.status === o[0] ? 'on' : '') + '" data-gst="' + o[0] + '">' + o[1] + '</button>').join('');
+  $('#granSort').textContent = (g.sort === 'new' ? '新的在上' : '舊的在上') + ' ⇅';
+  const q = g.q.trim().toLowerCase();
+  let list = all.filter(it => {
+    if (g.l1 === '__none' && it.tags.length) return false;
+    if (g.l1 && g.l1 !== '__none' && !inL1(it, g.l1)) return false;
+    if (g.l2 && (it.tags || []).indexOf(g.l1 + SEP + g.l2) < 0) return false;
+    if (g.status === 'todo' && it.seen) return false;
+    if (g.status === 'seen' && !it.seen) return false;
+    if (q) {
+      const hay = [it.title, it.note, (it.tags || []).join(' '), platOf(it.url).name, it.url].join(' ').toLowerCase();
+      if (q.split(/\s+/).some(w => hay.indexOf(w) < 0)) return false;
+    }
+    return true;
+  });
+  list.sort((a, b) => g.sort === 'new' ? b.savedAt - a.savedAt : a.savedAt - b.savedAt);
+  if (!list.length) {
+    $('#granList').innerHTML = '<div class="empty-box">' + (all.length ? '找不到符合的。<br>換個關鍵字，或把篩選改回「全部」。' : '糧倉還是空的。<br>先到「待整理」存幾則吧。') + '</div>';
+    return;
+  }
+  const shown = list.slice(0, g.limit);
+  $('#granList').innerHTML = shown.map(it => rowHtml(it, 'gran')).join('') +
+    (list.length > shown.length ? '<button type="button" class="show-more" data-act="more">再顯示 60 顆（還有 ' + (list.length - shown.length) + ' 顆）</button>' : '');
+}
+
+/* ---------- 嗑一顆 ---------- */
+function snackPool() {
+  const s = S.snack;
+  let L = live().filter(it => (!s.todo || !it.seen) && (!s.l1 || inL1(it, s.l1)));
+  if (s.old) L = L.slice().sort((a, b) => a.savedAt - b.savedAt).slice(0, 3);
+  return L;
+}
+function snackPick(force) {
+  const L = snackPool();
+  if (!L.length) { S.snack.cur = ''; return; }
+  if (!force && L.some(x => x.id === S.snack.cur)) return;
+  const others = L.filter(x => x.id !== S.snack.cur);
+  const from = others.length ? others : L;
+  S.snack.cur = from[Math.floor(Math.random() * from.length)].id;
+  S.snack.spin++;
+}
+function renderSnack() {
+  const s = S.snack, T = tagsTree();
+  $('#snackL1').innerHTML = '<button type="button" class="chip-top' + (s.l1 ? '' : ' on') + '" data-sl1="">全部糧倉</button>' +
+    T.map(t => '<button type="button" class="chip-top' + (s.l1 === t.n ? ' on' : '') + '" data-sl1="' + esc(t.n) + '">' + esc(t.n) + '</button>').join('');
+  const td = $('#snackTodo'), od = $('#snackOld');
+  td.textContent = (s.todo ? '✓ ' : '') + '只挑還沒看的'; td.classList.toggle('on', s.todo); td.setAttribute('aria-pressed', s.todo);
+  od.textContent = (s.old ? '✓ ' : '') + '放最久的優先'; od.classList.toggle('on', s.old); od.setAttribute('aria-pressed', s.old);
+  snackPick(false);
+  const it = byId(s.cur);
+  const L = snackPool();
+  if (!it) {
+    $('#snackBox').innerHTML = '<div class="empty-box" style="color:var(--top-muted)">' + (live().length
+      ? '這個糧倉都吃完了。<br>換一個糧倉，或關掉「只挑還沒看的」。'
+      : '糧倉還是空的，先去存幾顆吧。') + '</div>';
+    return;
+  }
+  const p = platOf(it.url);
+  const age = daysAgo(it.savedAt);
+  $('#snackBox').innerHTML =
+    '<div class="snack-card" style="transform:rotate(' + (s.spin % 2 ? 1.5 : -1.5) + 'deg)">' +
+      '<div class="snack-img">' + (it.thumb ? '<img src="' + esc(it.thumb) + '" alt="" referrerpolicy="no-referrer" onerror="this.remove()">' : '') + '<span class="src" style="font-size:12px;padding:2px 8px;left:10px;bottom:10px">' + esc(p.name) + '</span></div>' +
+      '<div class="snack-title">' + esc(it.title || '（沒有標題）') + '</div>' +
+      '<div class="row-meta">' + (it.tags || []).map(t => '<span class="tag">' + esc(t) + '</span>').join('') + '</div>' +
+      '<div class="snack-age">' + (age === 0 ? '今天才囤的' : '<b>' + age + '</b>天前囤的') + (it.seen ? '，吃過了' : '，還沒吃') + '</div>' +
+    '</div>' +
+    '<div class="snack-btns"><button type="button" class="btn-big ghost" data-act="reroll"' + (L.length < 2 ? ' disabled style="opacity:.4"' : '') + '>換一顆</button>' +
+    '<button type="button" class="btn-big grain" data-act="eat" data-id="' + esc(it.id) + '">就吃這顆</button></div>' +
+    '<div class="small" style="color:#9AA6C2">符合條件的有 ' + L.length + ' 顆</div>';
+}
+
+/* ---------- 設定 ---------- */
+function optHtml(key, val, title, desc) {
+  return '<button type="button" class="opt' + (S.pref[key] === val ? ' on' : '') + '" data-pref="' + key + '" data-val="' + val + '"><b>' + title + '</b><span>' + desc + '</span></button>';
+}
+function bookmarkletHref() {
+  const app = location.origin + location.pathname;
+  return "javascript:void(window.open('" + app + "?url='+encodeURIComponent(location.href)+'&title='+encodeURIComponent(document.title),'tuntun','width=460,height=760'))";
+}
+function renderSettings() {
+  const sy = S.sync, T = tagsTree();
+  const tree = T.map((t, i) =>
+    '<div class="tt-l1"><div class="tt-head"><b>' + esc(t.n) + '</b>' +
+      '<button type="button" class="icon-btn" data-tg="up" data-i="' + i + '" aria-label="往上移"' + (i ? '' : ' disabled') + '>↑</button>' +
+      '<button type="button" class="icon-btn" data-tg="down" data-i="' + i + '" aria-label="往下移"' + (i < T.length - 1 ? '' : ' disabled') + '>↓</button>' +
+      '<button type="button" class="icon-btn" data-tg="ren" data-i="' + i + '" aria-label="改名">✎</button>' +
+      '<button type="button" class="icon-btn" data-tg="del" data-i="' + i + '" aria-label="刪除">✕</button></div>' +
+      '<div class="tt-kids">' + t.c.map((c, j) =>
+        '<span class="tt-kid">' + esc(c) +
+        '<button type="button" class="icon-btn" style="width:30px;height:30px" data-tg="renk" data-i="' + i + '" data-j="' + j + '" aria-label="改名 ' + esc(c) + '">✎</button>' +
+        '<button type="button" class="icon-btn" style="width:30px;height:30px" data-tg="delk" data-i="' + i + '" data-j="' + j + '" aria-label="刪除 ' + esc(c) + '">✕</button></span>').join('') +
+      '<button type="button" class="chip sm dash" data-tg="addk" data-i="' + i + '">＋ 細分類</button></div></div>').join('');
+  $('#setPanel').innerHTML =
+    '<div class="card"><h2>雲端同步（Google 試算表）</h2>' +
+      '<p>不填也能用，資料只存在這台裝置。填好後，手機和電腦會自動同步。</p>' +
+      '<div class="field"><label for="setUrl">Apps Script 網址</label><input class="input" id="setUrl" type="url" inputmode="url" placeholder="https://script.google.com/macros/s/…/exec" value="' + esc(sy.url) + '"></div>' +
+      '<div class="field"><label for="setKey">通行碼</label><input class="input" id="setKey" type="password" autocomplete="off" value="' + esc(sy.key) + '"></div>' +
+      '<div class="btns"><button type="button" class="btn leaf" data-act="saveConn">儲存並測試</button>' +
+      (sy.url ? '<button type="button" class="btn line" data-act="syncNow">立即同步</button>' : '') + '</div>' +
+      '<p class="small" style="margin:10px 0 0" id="connMsg">' + esc(syncSummary()) + '</p></div>' +
+
+    '<div class="card"><h2>標籤</h2><p>最多兩層，例如「AI技巧／製圖」。改名會一起改到所有收藏。</p>' +
+      '<div class="tag-tree">' + tree + '</div>' +
+      '<div class="btns" style="margin-top:10px"><button type="button" class="btn line" data-tg="add">＋ 新增標籤</button></div></div>' +
+
+    '<div class="card"><h2>打開時先看</h2>' + optHtml('home', 'inbox', '待整理（預設）', '先處理還沒分類的') + optHtml('home', 'granary', '糧倉', '先看全部收藏') + '</div>' +
+    '<div class="card"><h2>標成看過時，要不要寫心得</h2>' +
+      optHtml('noteMode', 'toast', '提示（預設）', '下方出現「寫心得」，想寫才點，不點就消失') +
+      optHtml('noteMode', 'always', '每次都跳', '標成看過後直接打開心得框，可略過') +
+      optHtml('noteMode', 'never', '不跳', '只標看過，要寫再右滑打開') + '</div>' +
+    '<div class="card"><h2>從其他 App 分享進來時</h2>' +
+      optHtml('shareMode', 'quick', '快速標籤（預設）', '最近用的標籤可多選，3 秒不動就自動存好') +
+      optHtml('shareMode', 'full', '直接打開完整分類', '每次都選好再存') + '</div>' +
+    '<div class="card"><h2>外觀</h2>' + optHtml('theme', 'system', '跟隨系統', '手機深色模式時自動變深色') + optHtml('theme', 'light', '淺色', '') + optHtml('theme', 'dark', '深色', '') + '</div>' +
+
+    '<div class="card"><h2>在電腦上收藏</h2><p>把下面的黃色按鈕拖到瀏覽器的書籤列。看到想存的網頁時按一下，就會跳出囤囤の森存好。</p>' +
+      '<a class="bookmarklet" href="' + esc(bookmarkletHref()) + '" onclick="event.preventDefault()">囤一下</a>' +
+      '<p class="small" style="margin:10px 0 0">手機上不用這個，直接用分享選單就好。</p></div>' +
+
+    '<div class="card"><h2>匯入舊收藏</h2><p>把各個 App 收藏的連結複製起來，一次貼進來（一行一個、混在文字裡都可以），會放進「待整理」。</p>' +
+      '<textarea class="input" id="impText" placeholder="貼上很多連結…"></textarea>' +
+      '<div class="btns" style="margin-top:8px"><button type="button" class="btn" data-act="impPreview">找出連結</button></div>' +
+      '<p class="small" id="impMsg" style="margin:8px 0 0"></p>' +
+      '<p class="small" style="margin:10px 0 6px">也可以匯入囤囤の森的備份檔（.json）：</p>' +
+      '<input type="file" id="impFile" accept=".json,application/json" aria-label="選擇備份檔"></div>' +
+
+    '<div class="card"><h2>備份</h2><p>換手機或清資料前，先匯出一份。</p>' +
+      '<div class="btns"><button type="button" class="btn line" data-act="export">匯出備份（.json）</button></div></div>' +
+
+    '<div class="card"><h2>這台裝置</h2><p>清除後，這台裝置的收藏會全部消失（雲端的不會被刪）。</p>' +
+      '<div class="btns"><button type="button" class="btn danger" data-act="wipe">清除這台裝置的資料</button></div></div>' +
+
+    '<div class="foot"><button type="button" class="ver" style="color:var(--muted)" data-act="changelog">囤囤の森 v' + APP_VERSION + '　看更新內容</button></div>';
+}
+
+/* ================= 滑動與點擊 ================= */
+let sw = null;
+function swipeStart(e) {
+  const fg = e.target.closest('.row-fg');
+  if (!fg || e.target.closest('button') || (e.pointerType === 'mouse' && e.button !== 0)) return;
+  sw = { fg: fg, row: fg.parentElement, id: fg.dataset.id, x0: e.clientX, y0: e.clientY, dx: 0, lock: null, pid: e.pointerId };
+}
+function swipeMove(e) {
+  if (!sw || e.pointerId !== sw.pid) return;
+  const dx = e.clientX - sw.x0, dy = e.clientY - sw.y0;
+  if (!sw.lock) {
+    if (Math.abs(dx) > 10 && Math.abs(dx) > Math.abs(dy) * 1.2) {
+      sw.lock = 'x';
+      try { sw.fg.setPointerCapture(sw.pid); } catch (err) { /* 略過 */ }
+      sw.row.classList.add('dragging');
+    } else if (Math.abs(dy) > 10) { sw = null; return; }
+    else return;
+  }
+  sw.dx = Math.max(-170, Math.min(170, dx));
+  sw.fg.style.transform = 'translateX(' + sw.dx + 'px)';
+  sw.row.classList.toggle('go-r', sw.dx > 0);
+  sw.row.classList.toggle('go-l', sw.dx < 0);
+  const armed = Math.abs(sw.dx) > 90;
+  const r = sw.row.querySelector('[data-r]'), l = sw.row.querySelector('[data-l]');
+  if (r) r.textContent = armed && sw.dx > 0 ? '放開，' + r.dataset.r : r.dataset.r;
+  if (l) l.textContent = armed && sw.dx < 0 ? '放開，' + l.dataset.l : l.dataset.l;
+}
+function swipeEnd(e) {
+  if (!sw || e.pointerId !== sw.pid) return;
+  const s = sw; sw = null;
+  const mode = s.row.dataset.mode;
+  if (s.lock === 'x') {
+    s.row.classList.remove('dragging');
+    s.fg.style.transform = '';
+    setTimeout(() => s.row.classList.remove('go-r', 'go-l'), 220);
+    if (s.dx > 90) openOrganize(s.id);
+    else if (s.dx < -90) {
+      if (mode === 'gran' && byId(s.id) && byId(s.id).seen) unSeen(s.id);
+      else quickSeen(s.id);
+    }
+    return;
+  }
+  if (e.type === 'pointerup' && Math.abs(e.clientX - s.x0) < 8 && Math.abs(e.clientY - s.y0) < 8) openLink(s.id);
+}
+function swipeCancel() {
+  if (!sw) return;
+  sw.row.classList.remove('dragging', 'go-r', 'go-l');
+  sw.fg.style.transform = '';
+  sw = null;
+}
+['#inboxList', '#granList'].forEach(sel => {
+  const el = $(sel);
+  el.addEventListener('pointerdown', swipeStart);
+  el.addEventListener('pointermove', swipeMove);
+  el.addEventListener('pointerup', swipeEnd);
+  el.addEventListener('pointercancel', swipeCancel);
+  el.addEventListener('keydown', e => {
+    const fg = e.target.closest('.row-fg');
+    if (fg && (e.key === 'Enter' || e.key === ' ')) { e.preventDefault(); openLink(fg.dataset.id); }
+  });
+});
+
+/* ================= 打開連結與回來詢問 ================= */
+function openLink(id) {
+  const it = byId(id);
+  if (!it) return;
+  save('tt_last', { id: id, at: now() });
+  window.open(it.url, '_blank', 'noopener');
+}
+function checkReturn() {
+  const last = load('tt_last', null);
+  if (!last) return;
+  const gap = now() - last.at;
+  if (gap < 3000) return;
+  localStorage.removeItem('tt_last');
+  if (gap > 6 * 3600000) return;
+  const it = byId(last.id);
+  if (it && !it.deleted) showPrompt(it);
+}
+function showPrompt(it) {
+  closeToast();
+  $('#promptRoot').innerHTML =
+    '<div class="prompt" role="dialog" aria-label="看完了嗎">' +
+      '<div style="font-size:14px;line-height:1.5">剛剛看的「' + esc(it.title || '沒有標題的那則') + '」看完了嗎？</div>' +
+      '<div class="prompt-btns">' +
+        '<button type="button" class="p-seen" data-pa="seen">看過</button>' +
+        '<button type="button" class="p-org" data-pa="org">分類</button>' +
+        '<button type="button" class="p-later" data-pa="later">還沒看完</button>' +
+      '</div></div>';
+  $('#promptRoot').dataset.id = it.id;
+}
+function closePrompt(silent) { $('#promptRoot').innerHTML = ''; }
+$('#promptRoot').addEventListener('click', e => {
+  const b = e.target.closest('[data-pa]');
+  if (!b) return;
+  const id = $('#promptRoot').dataset.id;
+  closePrompt();
+  const it = byId(id);
+  if (b.dataset.pa === 'seen') { if (it && it.seen) openNote(id); else quickSeen(id); }
+  if (b.dataset.pa === 'org') openOrganize(id);
+});
+
+/* ================= 看過 ================= */
+function quickSeen(id) {
+  const it = byId(id);
+  if (!it) return;
+  if (it.seen) { toast('這則已經標過看過了'); return; }
+  const before = patchItem(id, { seen: true, seenAt: now() });
+  const stays = !(it.tags && it.tags.length);
+  const text = stays ? '標成看過，還沒分類，先留著' : '標成看過';
+  if (S.pref.noteMode === 'always') { openNote(id); return; }
+  const acts = [];
+  if (S.pref.noteMode === 'toast') acts.push({ label: '寫心得', fn: () => openNote(id) });
+  acts.push({ label: '復原', fn: () => restore(before) });
+  toast(text, acts);
+}
+function unSeen(id) {
+  const before = patchItem(id, { seen: false, seenAt: 0 });
+  toast('改成還沒看', [{ label: '復原', fn: () => restore(before) }]);
+}
+function openNote(id) {
+  const it = byId(id);
+  if (!it) return;
+  sheet('<h3>' + esc(it.title || '（沒有標題）') + '</h3>' +
+    '<label class="lbl" for="noteBox">吃完了，覺得怎樣？一句就好</label>' +
+    '<textarea class="input" id="noteBox" rows="3">' + esc(it.note || '') + '</textarea>' +
+    '<div class="btns"><button type="button" class="btn line" style="flex:1" data-sh="close">略過</button>' +
+    '<button type="button" class="btn" style="flex:1" data-sh="saveNote">存心得</button></div>', {
+    saveNote: () => {
+      const v = $('#noteBox').value.trim();
+      patchItem(id, { note: v });
+      closeSheet();
+      if (v) toast('心得存好了');
+    }
+  });
+  setTimeout(() => { const t = $('#noteBox'); if (t) t.focus(); }, 60);
+}
+
+/* ================= 整理面板 ================= */
+let ORG = null;
+function chipsHtml(sel) {
+  return tagsTree().map(t => {
+    const part = sel.some(p => p.indexOf(t.n + SEP) === 0);
+    return '<div class="group"><button type="button" class="chip l1' + (sel.indexOf(t.n) >= 0 ? ' on' : (part ? ' part' : '')) + '" data-path="' + esc(t.n) + '" aria-pressed="' + (sel.indexOf(t.n) >= 0) + '">' + esc(t.n) + '</button>' +
+      t.c.map(c => { const p = t.n + SEP + c; return '<button type="button" class="chip sm' + (sel.indexOf(p) >= 0 ? ' on' : '') + '" data-path="' + esc(p) + '" aria-pressed="' + (sel.indexOf(p) >= 0) + '">' + esc(c) + '</button>'; }).join('') +
+      '</div>';
+  }).join('');
+}
+function toggleSel(sel, path) {
+  if (sel.indexOf(path) >= 0) return sel.filter(p => p !== path);
+  const [l1, l2] = splitTag(path);
+  let out = l2 ? sel.filter(p => p !== l1) : sel.filter(p => p.indexOf(l1 + SEP) !== 0);
+  out.push(path);
+  return out;
+}
+function addTagPath(raw) {
+  const txt = String(raw || '').trim().replace(/\s*[\/／>＞]\s*/g, SEP);
+  if (!txt) return '';
+  let [l1, l2] = splitTag(txt);
+  l1 = l1.trim().slice(0, 12); l2 = l2.replace(new RegExp(SEP, 'g'), '').trim().slice(0, 12);
+  if (!l1) return '';
+  const tree = JSON.parse(JSON.stringify(tagsTree()));
+  let t = tree.find(x => x.n === l1);
+  if (!t) { t = { n: l1, c: [] }; tree.push(t); }
+  if (l2 && t.c.indexOf(l2) < 0) t.c.push(l2);
+  setTags(tree);
+  return l2 ? l1 + SEP + l2 : l1;
+}
+function openOrganize(id, opts) {
+  opts = opts || {};
+  const it = byId(id);
+  if (!it) return;
+  closePrompt();
+  ORG = { id: id, sel: (opts.sel || it.tags || []).slice(), seen: !!it.seen, fromShare: !!opts.fromShare };
+  sheet(
+    '<label class="lbl" for="orgTitle">標題</label>' +
+    '<input class="input" id="orgTitle" value="' + esc(it.title) + '" placeholder="' + (it.title ? '' : '沒抓到標題，補一句之後才找得到') + '" maxlength="300">' +
+    '<div class="small" style="margin-top:-6px;word-break:break-all">' + esc(platOf(it.url).name) + '　' + esc(it.url.length > 70 ? it.url.slice(0, 70) + '…' : it.url) + '</div>' +
+    '<div class="lbl">收進哪些糧倉？可以多選</div>' +
+    '<div class="groups" id="orgChips">' + chipsHtml(ORG.sel) + '</div>' +
+    '<div style="display:flex;gap:8px"><input class="input" id="orgNew" placeholder="新標籤，例如 AI技巧/影片" aria-label="新增標籤" style="flex:1">' +
+    '<button type="button" class="btn line" data-sh="addTag">加入</button></div>' +
+    '<div class="small" id="orgSel"></div>' +
+    '<button type="button" class="switch" id="orgSeen" aria-pressed="' + ORG.seen + '"><span>已經看過了</span><span class="track"><i></i></span></button>' +
+    '<div id="orgNoteWrap" class="' + (ORG.seen ? '' : 'hide') + '" style="display:flex;flex-direction:column;gap:6px">' +
+      '<label class="lbl" for="orgNote">吃完了，覺得怎樣？一句就好（可略過）</label>' +
+      '<textarea class="input" id="orgNote" rows="2">' + esc(it.note || '') + '</textarea></div>' +
+    '<button type="button" class="btn leaf" style="min-height:52px;font-size:16px" data-sh="finish" id="orgFinish">完成</button>' +
+    '<div class="btns" style="justify-content:space-between">' +
+      '<button type="button" class="btn line" data-sh="close">' + (ORG.fromShare ? '先放收件匣' : '先不要') + '</button>' +
+      '<div class="btns">' + (S.sync.url && !it.title ? '<button type="button" class="btn line" data-sh="refetch">重抓標題</button>' : '') +
+      '<button type="button" class="btn danger" data-sh="del">刪除</button></div></div>',
+    {
+      addTag: () => {
+        const p = addTagPath($('#orgNew').value);
+        if (!p) return;
+        $('#orgNew').value = '';
+        if (ORG.sel.indexOf(p) < 0) ORG.sel = toggleSel(ORG.sel, p);
+        refreshOrg();
+      },
+      finish: () => {
+        const title = $('#orgTitle').value.trim();
+        const seen = ORG.seen;
+        const note = seen ? $('#orgNote').value.trim() : (it.note || '');
+        const tags = cleanTags(ORG.sel);
+        const before = patchItem(id, { title: title, tags: tags, seen: seen, seenAt: seen ? (it.seenAt || now()) : 0, note: note }, true);
+        if (tags.length) pushRecent(tags);
+        closeSheet();
+        render();
+        let text;
+        if (tags.length) text = '收進 ' + (tags.length > 2 ? tags.slice(0, 2).join('、') + ' 等 ' + tags.length + ' 個' : tags.join('、')) + (seen && !before.seen ? '，也看過了' : '');
+        else text = seen ? '看過了，還沒收進糧倉，先留著' : '還沒選糧倉，先留著';
+        toast(text, [{ label: '復原', fn: () => restore(before) }]);
+      },
+      del: () => {
+        const before = patchItem(id, { deleted: true }, true);
+        closeSheet();
+        render();
+        toast('刪掉了', [{ label: '復原', fn: () => restore(before) }]);
+      },
+      refetch: () => { delete S.metaTried[id]; save('tt_meta', S.metaTried); queueMeta(id); toast('重新抓標題中…'); closeSheet(); }
+    });
+  $('#orgChips').addEventListener('click', e => {
+    const b = e.target.closest('[data-path]');
+    if (!b) return;
+    ORG.sel = toggleSel(ORG.sel, b.dataset.path);
+    refreshOrg();
+  });
+  $('#orgSeen').addEventListener('click', () => {
+    ORG.seen = !ORG.seen;
+    $('#orgSeen').setAttribute('aria-pressed', ORG.seen);
+    $('#orgNoteWrap').classList.toggle('hide', !ORG.seen);
+  });
+  $('#orgNew').addEventListener('keydown', e => { if (e.key === 'Enter') { e.preventDefault(); $('[data-sh="addTag"]').click(); } });
+  refreshOrg();
+}
+function refreshOrg() {
+  $('#orgChips').innerHTML = chipsHtml(ORG.sel);
+  const tags = cleanTags(ORG.sel);
+  $('#orgSel').textContent = tags.length ? '已選：' + tags.join('、') : '還沒選（不選就先留在待整理）';
+  $('#orgFinish').textContent = tags.length ? '收進糧倉（' + tags.length + ' 個）' : '完成';
+}
+
+/* ================= 分享進來 ================= */
+let SHARE = null;
+function handleIncoming(params) {
+  const raw = [params.get('url'), params.get('text'), params.get('title')].filter(Boolean).join(' ');
+  const url = extractUrls(raw)[0];
+  if (!url) {
+    if (raw.trim()) toast('這次分享裡找不到連結');
+    return;
+  }
+  let title = params.get('title') || '';
+  if (!title || extractUrls(title).length) {
+    const t = (params.get('text') || '').replace(/https?:\/\/\S+/g, '').trim();
+    title = t.length >= 2 ? t : '';
+  }
+  if (title && GENERIC_TITLE.test(title)) title = '';
+  const r = addLink(url, title.slice(0, 200));
+  go('inbox');
+  if (r.dup) {
+    sheet('<h3>這則已經囤過了</h3><div style="font-size:14px;line-height:1.5">' + esc(r.item.title || r.item.url) + '</div>' +
+      '<div class="small">' + fmtWhen(r.item.savedAt) + ' 存的' + (r.item.tags.length ? '，在 ' + esc(r.item.tags.join('、')) : '，還在待整理') + '</div>' +
+      '<div class="btns"><button type="button" class="btn line" style="flex:1" data-sh="close">好</button>' +
+      '<button type="button" class="btn" style="flex:1" data-sh="open">打開那則</button></div>', {
+      open: () => openOrganize(r.item.id)
+    });
+    return;
+  }
+  if (S.pref.shareMode === 'full') { openOrganize(r.item.id, { fromShare: true }); return; }
+  openShareCard(r.item.id);
+}
+function openShareCard(id) {
+  SHARE = { id: id, sel: [], left: 3, touched: false };
+  const chips = recentTags(3);
+  const renderChips = () => {
+    $('#shChips').innerHTML = chips.map(p => '<button type="button" class="chip' + (SHARE.sel.indexOf(p) >= 0 ? ' on' : '') + '" data-path="' + esc(p) + '">' + esc(p) + '</button>').join('') +
+      '<button type="button" class="chip dash" data-sh="more">' + (chips.length ? '更多分類…' : '＋ 建立標籤') + '</button>';
+    $('#shDone').textContent = SHARE.sel.length ? '完成，收進 ' + SHARE.sel.length + ' 個糧倉' : '完成，先放待整理';
+    $('#shHint').textContent = SHARE.touched ? '選好按完成' : SHARE.left + ' 秒後自動存好';
+  };
+  const it = byId(id);
+  sheet('<div style="display:flex;justify-content:space-between;align-items:center"><span style="font-size:18px;font-weight:900">囤好了！</span><span class="small" id="shHint"></span></div>' +
+    '<div style="font-size:14px;color:var(--muted);line-height:1.5" id="shTitle">' + esc(it.title || platOf(it.url).name + ' 的連結（標題抓取中）') + '</div>' +
+    '<div class="lbl">順便分類？可以點好幾個</div>' +
+    '<div style="display:flex;flex-wrap:wrap;gap:8px" id="shChips"></div>' +
+    '<button type="button" class="btn" style="min-height:52px;font-size:16px" data-sh="done" id="shDone"></button>' +
+    '<div class="small" style="text-align:center">存好後按手機的「返回」，就會回到原本的 App</div>', {
+    done: () => shareDone(),
+    more: () => { clearInterval(SHARE.iv); const sel = SHARE.sel.slice(); SHARE = null; openOrganize(id, { sel: sel, fromShare: true }); }
+  }, () => { if (SHARE) { clearInterval(SHARE.iv); SHARE = null; } });
+  $('#shChips').addEventListener('click', e => {
+    const b = e.target.closest('[data-path]');
+    if (!b || !SHARE) return;
+    SHARE.touched = true;
+    SHARE.sel = toggleSel(SHARE.sel, b.dataset.path);
+    renderChips();
+  });
+  renderChips();
+  SHARE.iv = setInterval(() => {
+    if (!SHARE) return;
+    if (SHARE.touched) return;
+    SHARE.left--;
+    if (SHARE.left <= 0) shareDone(); else renderChips();
+  }, 1000);
+}
+function shareDone() {
+  if (!SHARE) return;
+  clearInterval(SHARE.iv);
+  const { id, sel } = SHARE;
+  SHARE = null;
+  closeSheet();
+  const tags = cleanTags(sel);
+  if (tags.length) {
+    const before = patchItem(id, { tags: tags }, true);
+    pushRecent(tags);
+    render();
+    toast('收進 ' + tags.join('、'), [{ label: '復原', fn: () => restore(before) }]);
+  } else {
+    render();
+    toast('存進待整理了');
+  }
+}
+
+/* ================= 手動存 ================= */
+function openAdd() {
+  sheet('<h3>存一則</h3><label class="lbl" for="addUrl">貼上連結（也可以貼一整段分享文字）</label>' +
+    '<textarea class="input" id="addUrl" rows="3" placeholder="https://…"></textarea>' +
+    (navigator.clipboard && navigator.clipboard.readText ? '<button type="button" class="btn line" data-sh="paste">從剪貼簿貼上</button>' : '') +
+    '<div class="btns"><button type="button" class="btn line" style="flex:1" data-sh="close">取消</button>' +
+    '<button type="button" class="btn leaf" style="flex:1" data-sh="ok">存</button></div>', {
+    paste: async () => { try { $('#addUrl').value = await navigator.clipboard.readText(); } catch (e) { toast('沒辦法讀剪貼簿，請長按貼上'); } },
+    ok: () => {
+      const txt = $('#addUrl').value;
+      const urls = extractUrls(txt);
+      if (!urls.length) { toast('找不到連結，要以 http 開頭'); return; }
+      closeSheet();
+      if (urls.length > 1) { importUrls(urls); return; }
+      const p = new URLSearchParams();
+      p.set('text', txt);
+      handleIncoming(p);
+    }
+  });
+  setTimeout(() => { const t = $('#addUrl'); if (t) t.focus(); }, 60);
+}
+
+/* ================= 匯入、匯出 ================= */
+let IMP = [];
+function importUrls(urls) {
+  let added = 0, dup = 0;
+  const seen = {};
+  const base = now();
+  BATCH = true;
+  try {
+    urls.forEach((u, i) => {
+      const n = normUrl(u);
+      if (seen[n]) { dup++; return; }
+      seen[n] = 1;
+      const r = addLink(u, '');
+      if (r.dup) dup++;
+      else { added++; r.item.savedAt = base - i; }
+    });
+  } finally { BATCH = false; }
+  persistItems();
+  persistSync();
+  render();
+  toast('匯入 ' + added + ' 則' + (dup ? '，' + dup + ' 則已經存過' : '') + '，都在待整理');
+}
+function exportBackup() {
+  const data = { app: '囤囤の森', version: APP_VERSION, at: new Date().toISOString(), items: S.items, tags: tagsTree() };
+  const blob = new Blob([JSON.stringify(data, null, 1)], { type: 'application/json' });
+  const a = document.createElement('a');
+  const d = new Date();
+  a.href = URL.createObjectURL(blob);
+  a.download = '囤囤の森備份_' + d.getFullYear() + String(d.getMonth() + 1).padStart(2, '0') + String(d.getDate()).padStart(2, '0') + '.json';
+  document.body.appendChild(a);
+  a.click();
+  setTimeout(() => { URL.revokeObjectURL(a.href); a.remove(); }, 1000);
+}
+function importBackup(file) {
+  const fr = new FileReader();
+  fr.onload = () => {
+    let d;
+    try { d = JSON.parse(fr.result); } catch (e) { toast('這個檔案讀不懂，確定是囤囤の森的備份嗎？'); return; }
+    if (!d || !Array.isArray(d.items)) { toast('檔案裡沒有收藏資料'); return; }
+    let n = 0;
+    d.items.forEach(x => {
+      if (!x || !x.id || !x.url) return;
+      const cur = byId(x.id);
+      if (cur && (cur.updatedAt || 0) >= (x.updatedAt || 0)) return;
+      const it = Object.assign({ tags: [], seen: false, note: '', deleted: false }, x);
+      const i = S.items.findIndex(y => y.id === it.id);
+      if (i < 0) S.items.push(it); else S.items[i] = it;
+      markDirty(it.id);
+      n++;
+    });
+    if (Array.isArray(d.tags)) {
+      const tree = JSON.parse(JSON.stringify(tagsTree()));
+      d.tags.forEach(t => {
+        if (!t || !t.n) return;
+        let cur = tree.find(x => x.n === t.n);
+        if (!cur) { cur = { n: t.n, c: [] }; tree.push(cur); }
+        (t.c || []).forEach(c => { if (cur.c.indexOf(c) < 0) cur.c.push(c); });
+      });
+      setTags(tree);
+    }
+    persistItems();
+    scheduleSync();
+    render();
+    toast('從備份匯入 ' + n + ' 則');
+  };
+  fr.readAsText(file);
+}
+
+/* ================= 標籤管理 ================= */
+function retag(fn) {
+  live().forEach(it => {
+    const next = fn(it.tags || []);
+    if (JSON.stringify(next) !== JSON.stringify(it.tags || [])) putItem(Object.assign({}, it, { tags: next }), true);
+  });
+}
+function countUsing(pred) { return live().filter(it => (it.tags || []).some(pred)).length; }
+function askText(title, value, placeholder) {
+  return new Promise(res => {
+    sheet('<h3>' + esc(title) + '</h3><input class="input" id="askBox" maxlength="12" value="' + esc(value || '') + '" placeholder="' + esc(placeholder || '') + '">' +
+      '<div class="small">最多 12 個字，不能有「／」</div>' +
+      '<div class="btns"><button type="button" class="btn line" style="flex:1" data-sh="close">取消</button><button type="button" class="btn" style="flex:1" data-sh="ok">好</button></div>',
+      { ok: () => { const v = $('#askBox').value.trim().replace(/[\/／]/g, ''); res(v); closeSheet(); } }, () => res(''));
+    setTimeout(() => { const b = $('#askBox'); if (b) { b.focus(); b.select(); b.addEventListener('keydown', e => { if (e.key === 'Enter') $('[data-sh="ok"]').click(); }); } }, 60);
+  });
+}
+function askConfirm(title, body, okText, danger) {
+  return new Promise(res => {
+    sheet('<h3>' + esc(title) + '</h3><div style="font-size:14px;line-height:1.6;color:var(--muted)">' + body + '</div>' +
+      '<div class="btns"><button type="button" class="btn line" style="flex:1" data-sh="close">取消</button>' +
+      '<button type="button" class="btn' + (danger ? ' danger' : '') + '" style="flex:1" data-sh="ok">' + esc(okText) + '</button></div>',
+      { ok: () => { res(true); closeSheet(); } }, () => res(false));
+  });
+}
+async function tagAction(act, i, j) {
+  const tree = JSON.parse(JSON.stringify(tagsTree()));
+  const t = tree[i];
+  if (act === 'add') {
+    const v = await askText('新增標籤', '', '例如：AI技巧');
+    if (!v) return;
+    if (tree.some(x => x.n === v)) { toast('已經有「' + v + '」了'); return; }
+    tree.push({ n: v, c: [] }); setTags(tree);
+  } else if (act === 'addk') {
+    const v = await askText('在「' + t.n + '」底下新增細分類', '', '例如：製圖');
+    if (!v) return;
+    if (t.c.indexOf(v) >= 0) { toast('已經有了'); return; }
+    t.c.push(v); setTags(tree);
+  } else if (act === 'up' || act === 'down') {
+    const k = act === 'up' ? i - 1 : i + 1;
+    if (k < 0 || k >= tree.length) return;
+    [tree[i], tree[k]] = [tree[k], tree[i]]; setTags(tree);
+  } else if (act === 'ren') {
+    const v = await askText('「' + t.n + '」改名', t.n);
+    if (!v || v === t.n) return;
+    if (tree.some(x => x.n === v)) { toast('已經有「' + v + '」了'); return; }
+    const old = t.n; t.n = v; setTags(tree);
+    retag(tags => tags.map(p => p === old ? v : (p.indexOf(old + SEP) === 0 ? v + p.slice(old.length) : p)));
+    S.recent = S.recent.map(p => p === old ? v : (p.indexOf(old + SEP) === 0 ? v + p.slice(old.length) : p)); save('tt_recent', S.recent);
+  } else if (act === 'renk') {
+    const oldC = t.c[j];
+    const v = await askText('「' + oldC + '」改名', oldC);
+    if (!v || v === oldC) return;
+    if (t.c.indexOf(v) >= 0) { toast('已經有了'); return; }
+    t.c[j] = v; setTags(tree);
+    const o = t.n + SEP + oldC, nw = t.n + SEP + v;
+    retag(tags => tags.map(p => p === o ? nw : p));
+  } else if (act === 'del') {
+    const n = countUsing(p => p === t.n || p.indexOf(t.n + SEP) === 0);
+    const ok = await askConfirm('刪除「' + t.n + '」？', n ? '有 ' + n + ' 則收藏用到它（含細分類），會一起拿掉這個標籤；沒有其他標籤的會回到「待整理」。' : '目前沒有收藏用到它。', '刪除', true);
+    if (!ok) return;
+    const old = t.n; tree.splice(i, 1); setTags(tree);
+    retag(tags => tags.filter(p => p !== old && p.indexOf(old + SEP) !== 0));
+  } else if (act === 'delk') {
+    const p0 = t.n + SEP + t.c[j];
+    const n = countUsing(p => p === p0);
+    const ok = await askConfirm('刪除「' + t.c[j] + '」？', n ? '有 ' + n + ' 則收藏用到它，會改成只放在「' + esc(t.n) + '」。' : '目前沒有收藏用到它。', '刪除', true);
+    if (!ok) return;
+    t.c.splice(j, 1); setTags(tree);
+    retag(tags => cleanTags([...new Set(tags.map(p => p === p0 ? t.n : p))]));
+  }
+  persistItems();
+  render();
+}
+
+/* ================= 面板與提示 ================= */
+let SHEET = null;
+function sheet(html, handlers, onClose) {
+  const wasOpen = !!SHEET;
+  closeSheet(true);
+  const root = $('#sheetRoot');
+  root.innerHTML = '<div class="scrim"><div class="sheet" role="dialog" aria-modal="true">' + html + '</div></div>';
+  SHEET = { handlers: handlers || {}, onClose: onClose, prevFocus: document.activeElement };
+  const scrim = $('.scrim', root);
+  scrim.addEventListener('click', e => {
+    if (e.target === scrim) { closeSheet(); return; }
+    const b = e.target.closest('[data-sh]');
+    if (!b) return;
+    const k = b.dataset.sh;
+    if (k === 'close') { closeSheet(); return; }
+    if (SHEET && SHEET.handlers[k]) SHEET.handlers[k]();
+  });
+  if (wasOpen && history.state && history.state.sheet) history.replaceState({ sheet: 1 }, '');
+  else history.pushState({ sheet: 1 }, '');
+}
+let ignorePop = 0;
+function closeSheet(replacing) {
+  if (!SHEET) return;
+  const s = SHEET;
+  SHEET = null;
+  $('#sheetRoot').innerHTML = '';
+  if (s.onClose) s.onClose();
+  if (!replacing && history.state && history.state.sheet) { ignorePop++; history.back(); }
+  if (s.prevFocus && s.prevFocus.focus) try { s.prevFocus.focus(); } catch (e) { /* 略過 */ }
+}
+// 手機的「返回」鍵：有面板時先關面板
+window.addEventListener('popstate', () => {
+  if (ignorePop > 0) { ignorePop--; return; }
+  if (SHEET) { const s = SHEET; SHEET = null; $('#sheetRoot').innerHTML = ''; if (s.onClose) s.onClose(); }
+});
+document.addEventListener('keydown', e => { if (e.key === 'Escape' && SHEET) closeSheet(); });
+
+let toastTimer = null;
+function toast(text, acts, ms) {
+  clearTimeout(toastTimer);
+  acts = acts || [];
+  $('#toastRoot').innerHTML = '<div class="toast"><span>' + esc(text) + '</span><div class="toast-acts">' +
+    acts.map((a, i) => '<button type="button" data-ti="' + i + '">' + esc(a.label) + '</button>').join('') + '</div></div>';
+  $('#toastRoot').onclick = e => {
+    const b = e.target.closest('[data-ti]');
+    if (!b) return;
+    const a = acts[Number(b.dataset.ti)];
+    closeToast();
+    if (a) a.fn();
+  };
+  toastTimer = setTimeout(closeToast, ms || (acts.length ? 5000 : 3000));
+}
+function closeToast() { clearTimeout(toastTimer); $('#toastRoot').innerHTML = ''; }
+
+/* ================= 同步 ================= */
+let syncTimer = null, syncing = false, syncAgain = false;
+function scheduleSync(ms) {
+  if (!S.sync.url) return;
+  clearTimeout(syncTimer);
+  syncTimer = setTimeout(syncNow, ms == null ? 1500 : ms);
+}
+async function api(action, body) {
+  const ctl = new AbortController();
+  const t = setTimeout(() => ctl.abort(), 25000);
+  try {
+    const r = await fetch(S.sync.url, {
+      method: 'POST',
+      headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+      body: JSON.stringify(Object.assign({ key: S.sync.key, action: action }, body || {})),
+      signal: ctl.signal,
+      redirect: 'follow'
+    });
+    const txt = await r.text();
+    let j;
+    try { j = JSON.parse(txt); } catch (e) { throw new Error('回應不是資料：請確認網址結尾是 /exec，且部署存取權限是「任何人」'); }
+    if (!j.ok) throw new Error(j.error || '後端回報錯誤');
+    return j;
+  } catch (e) {
+    if (e.name === 'AbortError') throw new Error('連線逾時');
+    if (e instanceof TypeError) throw new Error('連不上（沒網路，或網址不對）');
+    throw e;
+  } finally { clearTimeout(t); }
+}
+const CLOUD_FIELDS = ['id', 'url', 'norm', 'title', 'src', 'thumb', 'tags', 'seen', 'note', 'savedAt', 'seenAt', 'updatedAt', 'deleted'];
+async function syncNow() {
+  if (!S.sync.url || !S.sync.key) return;
+  if (!navigator.onLine) { renderSync(); return; }
+  if (syncing) { syncAgain = true; return; }
+  syncing = true;
+  renderSync();
+  const sent = {};
+  const items = S.sync.dirty.map(id => byId(id)).filter(Boolean).map(it => {
+    sent[it.id] = it.updatedAt;
+    const o = {};
+    CLOUD_FIELDS.forEach(k => { o[k] = it[k]; });
+    return o;
+  });
+  const settings = S.sync.dirtySet.filter(k => S.shared[k]).map(k => ({ key: k, value: S.shared[k].value, updatedAt: S.shared[k].updatedAt }));
+  const sentSet = settings.map(s => s.key);
+  try {
+    const j = await api('sync', { since: S.sync.since, items: items, settings: settings });
+    S.sync.dirty = S.sync.dirty.filter(id => { const it = byId(id); return !(it && sent[id] === it.updatedAt); });
+    S.sync.dirtySet = S.sync.dirtySet.filter(k => sentSet.indexOf(k) < 0);
+    let changed = false;
+    (j.items || []).forEach(x => {
+      const cur = byId(x.id);
+      if (cur && (cur.updatedAt || 0) > (x.updatedAt || 0)) return;
+      if (cur && S.sync.dirty.indexOf(x.id) >= 0) return;
+      const i = S.items.findIndex(y => y.id === x.id);
+      if (i < 0) S.items.push(x); else S.items[i] = Object.assign({}, S.items[i], x);
+      changed = true;
+    });
+    (j.settings || []).forEach(x => {
+      const cur = S.shared[x.key];
+      if (cur && (cur.updatedAt || 0) > (x.updatedAt || 0)) return;
+      if (x.value == null) return;
+      S.shared[x.key] = { value: x.value, updatedAt: x.updatedAt };
+      changed = true;
+    });
+    S.sync.since = j.now;
+    S.sync.lastOk = now();
+    S.sync.lastErr = '';
+    persistSync();
+    if (changed) { persistItems(); save('tt_shared', S.shared); }
+    if (changed && !SHEET) render(); else renderSync();
+    runMetaQueue();
+  } catch (e) {
+    S.sync.lastErr = e.message;
+    persistSync();
+    renderSync();
+  } finally {
+    syncing = false;
+    if (syncAgain || S.sync.dirty.length) { syncAgain = false; if (S.sync.dirty.length) scheduleSync(4000); }
+  }
+}
+function syncSummary() {
+  const sy = S.sync;
+  if (!sy.url) return '目前只存在這台裝置。';
+  if (sy.lastErr) return '同步失敗：' + sy.lastErr;
+  if (!navigator.onLine) return '離線中，連上網路後自動同步（' + sy.dirty.length + ' 筆等待中）。';
+  if (sy.dirty.length || sy.dirtySet.length) return '有 ' + (sy.dirty.length + sy.dirtySet.length) + ' 筆等待同步。';
+  return sy.lastOk ? '已同步（' + fmtWhen(sy.lastOk) + '）' : '還沒同步過。';
+}
+function renderSync() {
+  const sy = S.sync, dot = $('#syncDot'), txt = $('#syncText');
+  dot.className = 'dot';
+  if (!sy.url) { txt.textContent = '只存本機'; }
+  else if (syncing) { dot.classList.add('wait'); txt.textContent = '同步中'; }
+  else if (sy.lastErr) { dot.classList.add('bad'); txt.textContent = '同步失敗'; }
+  else if (!navigator.onLine) { dot.classList.add('wait'); txt.textContent = '離線'; }
+  else if (sy.dirty.length || sy.dirtySet.length) { dot.classList.add('wait'); txt.textContent = '待同步 ' + (sy.dirty.length + sy.dirtySet.length); }
+  else { dot.classList.add('ok'); txt.textContent = '已同步'; }
+  const m = $('#connMsg');
+  if (m) m.textContent = syncSummary();
+}
+
+/* ---------- 抓標題 ---------- */
+let metaQ = [], metaRunning = false;
+function queueMeta(id) {
+  if (S.metaTried[id] || metaQ.indexOf(id) >= 0) return;
+  metaQ.push(id);
+  setTimeout(runMetaQueue, 300);
+}
+async function runMetaQueue() {
+  if (metaRunning || !S.sync.url || !navigator.onLine) return;
+  live().forEach(it => { if (!it.title && !S.metaTried[it.id] && metaQ.indexOf(it.id) < 0) metaQ.push(it.id); });
+  if (!metaQ.length) return;
+  metaRunning = true;
+  try {
+    while (metaQ.length && navigator.onLine) {
+      const id = metaQ.shift();
+      const it = byId(id);
+      if (!it || it.deleted) continue;
+      S.metaTried[id] = 1;
+      save('tt_meta', S.metaTried);
+      try {
+        const j = await api('meta', { url: it.url });
+        const m = j.meta || {};
+        const cur = byId(id);
+        const patch = {};
+        if (m.title && !GENERIC_TITLE.test(m.title) && !cur.title) patch.title = m.title;
+        if (m.thumb && !cur.thumb) patch.thumb = m.thumb;
+        if (Object.keys(patch).length) {
+          patchItem(id, patch, true);
+          const st = $('#shTitle');
+          if (st && SHARE && SHARE.id === id && patch.title) st.textContent = patch.title;
+          if (!SHEET) render();
+        }
+      } catch (e) { /* 抓不到就算了，之後可手動補 */ }
+      await new Promise(r => setTimeout(r, 900));
+    }
+  } finally { metaRunning = false; }
+}
+
+/* ================= 全域事件 ================= */
+$$('.tabbar button').forEach(b => b.addEventListener('click', () => go(b.dataset.go)));
+$('#syncBtn').addEventListener('click', () => go('settings'));
+$('#granQ').addEventListener('input', e => { S.gran.q = e.target.value; S.gran.limit = 60; renderGranary(); });
+$('#snackTodo').addEventListener('click', () => { S.snack.todo = !S.snack.todo; S.snack.cur = ''; renderSnack(); });
+$('#snackOld').addEventListener('click', () => { S.snack.old = !S.snack.old; S.snack.cur = ''; renderSnack(); });
+
+document.addEventListener('click', async e => {
+  const t = e.target;
+  let b;
+  if ((b = t.closest('[data-gl1]'))) { S.gran.l1 = b.dataset.gl1; S.gran.l2 = ''; S.gran.limit = 60; renderGranary(); return; }
+  if ((b = t.closest('[data-gl2]'))) { S.gran.l2 = b.dataset.gl2; S.gran.limit = 60; renderGranary(); return; }
+  if ((b = t.closest('[data-gst]'))) { S.gran.status = b.dataset.gst; S.gran.limit = 60; renderGranary(); return; }
+  if (t.closest('#granSort')) { S.gran.sort = S.gran.sort === 'new' ? 'old' : 'new'; renderGranary(); return; }
+  if ((b = t.closest('[data-sl1]'))) { S.snack.l1 = b.dataset.sl1; S.snack.cur = ''; renderSnack(); return; }
+  if ((b = t.closest('[data-pref]'))) {
+    S.pref[b.dataset.pref] = b.dataset.val;
+    save('tt_pref', S.pref);
+    if (b.dataset.pref === 'theme') applyTheme();
+    renderSettings();
+    return;
+  }
+  if ((b = t.closest('[data-tg]')) && !t.closest('.sheet')) { tagAction(b.dataset.tg, Number(b.dataset.i), Number(b.dataset.j)); return; }
+  b = t.closest('[data-act]');
+  if (!b || t.closest('.sheet')) return;
+  const act = b.dataset.act;
+  if (act === 'org') openOrganize(b.dataset.id);
+  else if (act === 'add') openAdd();
+  else if (act === 'more') { S.gran.limit += 60; renderGranary(); }
+  else if (act === 'reroll') { snackPick(true); renderSnack(); }
+  else if (act === 'eat') openLink(b.dataset.id);
+  else if (act === 'changelog') openChangelog();
+  else if (act === 'saveConn') {
+    S.sync.url = $('#setUrl').value.trim();
+    S.sync.key = $('#setKey').value.trim();
+    S.sync.lastErr = '';
+    if (S.sync.url && !/^https:\/\/script\.google\.com\/macros\/s\/[\w-]+\/exec$/.test(S.sync.url)) {
+      toast('網址看起來不對，應該是 https://script.google.com/macros/s/…/exec');
+    }
+    S.sync.since = 0;
+    S.sync.dirty = [...new Set(S.sync.dirty.concat(live().map(x => x.id)))];
+    persistSync();
+    if (!S.sync.url) { renderSettings(); renderSync(); toast('已改回只存本機'); return; }
+    $('#connMsg').textContent = '測試中…';
+    try {
+      const j = await api('ping');
+      toast('連上了（後端 v' + j.version + '），開始同步');
+      syncNow();
+    } catch (err) {
+      S.sync.lastErr = err.message; persistSync();
+      $('#connMsg').textContent = '連不上：' + err.message;
+      renderSync();
+    }
+  }
+  else if (act === 'syncNow') { S.sync.lastErr = ''; syncNow(); }
+  else if (act === 'impPreview') {
+    const urls = extractUrls($('#impText').value);
+    const uniq = [...new Set(urls.map(normUrl))];
+    const have = uniq.filter(n => live().some(x => x.norm === n)).length;
+    IMP = urls;
+    if (!urls.length) { $('#impMsg').textContent = '找不到連結（要以 http 開頭）'; return; }
+    $('#impMsg').innerHTML = '找到 ' + uniq.length + ' 個連結' + (have ? '，其中 ' + have + ' 個已經存過' : '') +
+      '。<button type="button" class="btn leaf" style="margin-top:8px;display:block" data-act="impGo">匯入 ' + (uniq.length - have) + ' 則到待整理</button>';
+  }
+  else if (act === 'impGo') { importUrls(IMP); IMP = []; $('#impText').value = ''; $('#impMsg').textContent = ''; }
+  else if (act === 'export') exportBackup();
+  else if (act === 'wipe') {
+    const ok = await askConfirm('清除這台裝置的資料？', '這台裝置上的 ' + live().length + ' 則收藏、標籤與設定都會清掉。' + (S.sync.url ? '雲端試算表裡的不會被刪，之後重新填網址就能同步回來。' : '<b>你沒有設定雲端，清掉就找不回來了，建議先匯出備份。</b>'), '清除', true);
+    if (!ok) return;
+    ['tt_items', 'tt_shared', 'tt_pref', 'tt_sync', 'tt_recent', 'tt_meta', 'tt_last'].forEach(k => localStorage.removeItem(k));
+    location.reload();
+  }
+});
+document.addEventListener('change', e => {
+  if (e.target.id === 'impFile' && e.target.files[0]) { importBackup(e.target.files[0]); e.target.value = ''; }
+});
+
+function openChangelog() {
+  sheet('<h3>囤囤の森 v' + APP_VERSION + ' 更新內容</h3>' +
+    CHANGELOG.map(c => '<div><b style="font-size:14px">v' + c.v + '（' + c.d + '）</b><ul style="margin:6px 0 0;padding-left:20px;font-size:14px;line-height:1.7;color:var(--muted)">' +
+      c.lines.map(l => '<li>' + esc(l) + '</li>').join('') + '</ul></div>').join('') +
+    '<button type="button" class="btn" data-sh="close">好</button>');
+}
+function applyTheme() {
+  const t = S.pref.theme;
+  if (t === 'light' || t === 'dark') document.documentElement.setAttribute('data-theme', t);
+  else document.documentElement.removeAttribute('data-theme');
+  const night = getComputedStyle(document.documentElement).getPropertyValue('--night').trim();
+  $('meta[name="theme-color"]').setAttribute('content', night || '#23314F');
+}
+
+document.addEventListener('visibilitychange', () => {
+  if (document.visibilityState === 'visible') {
+    checkReturn();
+    scheduleSync(300);
+  }
+});
+window.addEventListener('online', () => { renderSync(); scheduleSync(300); });
+window.addEventListener('offline', renderSync);
+setInterval(() => { if (document.visibilityState === 'visible') scheduleSync(0); }, 120000);
+
+/* ================= 開始 ================= */
+(function start() {
+  $('#verBtn').textContent = 'v' + APP_VERSION;
+  applyTheme();
+  const params = new URLSearchParams(location.search);
+  const incoming = params.has('url') || params.has('text') || params.has('title');
+  if (incoming) history.replaceState(null, '', location.pathname);
+  go(S.pref.home === 'granary' && !incoming ? 'granary' : 'inbox');
+  if (incoming) handleIncoming(params);
+  else checkReturn();
+  if (S.sync.url) scheduleSync(500);
+  if ('serviceWorker' in navigator) navigator.serviceWorker.register('sw.js').catch(() => { /* 本機開檔時沒有 SW，照常可用 */ });
+})();
+</script>
+</body>
+</html>
