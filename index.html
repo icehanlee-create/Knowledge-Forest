@@ -1,9 +1,13 @@
 <!doctype html>
 <!--
   囤囤の森 — 隨手收藏網路上的影片、文章、貼文
-  版本：v1.0.0（2026-10-31）
+  版本：v1.1.0（2026-10-31）
 
   更新紀錄（最近三版，完整紀錄見規格檔）
+  v1.1.0（2026-10-31）
+    【新增】長按一則就能分類；分享卡沒有標題時可以順手補一句；每週提醒放超過一個月還沒看的
+    【新增】第一次使用的 3 步清單、待整理示範左右滑；電腦「囤一下」小視窗存好自動關
+    【調整】底部導覽文字放大
   v1.0.0（2026-10-31）
     【新增】第一版：從其他 App 分享就能存、待整理（左右滑）、糧倉（搜尋與篩選）、嗑一顆（隨機挑一則）
     【新增】多選兩層標籤、看過與心得、看完回來時詢問、貼上多個連結匯入、備份匯出
@@ -15,7 +19,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <meta name="theme-color" content="#23314F">
 <meta name="description" content="隨手收藏網路上的影片、文章、貼文">
-<title>囤囤の森 v1.0.0</title>
+<title>囤囤の森 v1.1.0</title>
 <link rel="manifest" href="manifest.webmanifest">
 <link rel="icon" href="icon-192.png">
 <link rel="apple-touch-icon" href="icon-192.png">
@@ -78,8 +82,11 @@ button{cursor:pointer}
 .row.go-l .row-bg{opacity:1;background:var(--grain);color:#23314F}
 .row.go-r .bg-l,.row.go-l .bg-r{visibility:hidden}
 .bg-r,.bg-l{display:flex;align-items:center;gap:8px}
-.row-fg{position:relative;background:var(--card);border:2px solid var(--line);border-radius:18px;display:flex;gap:12px;align-items:center;padding:10px;min-height:84px;touch-action:pan-y;user-select:none;-webkit-user-select:none;cursor:pointer;transition:transform .22s ease}
+.row-fg{position:relative;background:var(--card);border:2px solid var(--line);border-radius:18px;display:flex;gap:12px;align-items:center;padding:10px;min-height:84px;touch-action:pan-y;user-select:none;-webkit-user-select:none;-webkit-touch-callout:none;cursor:pointer;transition:transform .22s ease}
 .row.dragging .row-fg{transition:none}
+.row.pressing .row-fg{transform:scale(.97);transition:transform .5s ease}
+.row.demo .row-fg{transition:transform .45s ease}
+.thumb img{pointer-events:none}
 .thumb{position:relative;width:60px;height:60px;border-radius:14px;background:var(--line2);flex:none;overflow:hidden}
 .thumb img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover}
 .src{position:absolute;left:5px;bottom:5px;font-size:10px;font-weight:900;background:var(--night);color:#FAF8F2;border-radius:6px;padding:1px 5px;z-index:1}
@@ -167,9 +174,9 @@ textarea.input{padding:10px 12px;min-height:90px;resize:vertical;line-height:1.5
 
 /* 底部導覽 */
 .tabbar{position:fixed;left:50%;transform:translateX(-50%);bottom:calc(10px + env(safe-area-inset-bottom));width:min(496px,calc(100% - 24px));height:60px;background:var(--night);border-radius:30px;display:grid;grid-template-columns:repeat(4,1fr);z-index:20;box-shadow:0 0 0 2px var(--night2)}
-.tabbar button{border:none;background:transparent;color:var(--top-muted);font-size:12px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;position:relative}
+.tabbar button{border:none;background:transparent;color:var(--top-muted);font-size:15px;letter-spacing:.04em;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;position:relative}
 .tabbar button.on{color:var(--grain);font-weight:900}
-.tab-badge{position:absolute;top:6px;left:calc(50% + 8px);min-width:18px;height:18px;border-radius:9px;background:var(--grain);color:#23314F;font-size:11px;font-weight:900;font-family:var(--num);display:flex;align-items:center;justify-content:center;padding:0 5px}
+.tab-badge{position:absolute;top:1px;left:calc(50% + 16px);letter-spacing:0;min-width:18px;height:18px;border-radius:9px;background:var(--grain);color:#23314F;font-size:11px;font-weight:900;font-family:var(--num);display:flex;align-items:center;justify-content:center;padding:0 5px}
 
 /* 面板、提示 */
 .scrim{position:fixed;inset:0;background:rgba(14,20,36,.55);z-index:40;display:flex;align-items:flex-end;justify-content:center}
@@ -195,6 +202,25 @@ textarea.input{padding:10px 12px;min-height:90px;resize:vertical;line-height:1.5
 .p-seen{background:var(--grain);color:#23314F}
 .p-org{background:var(--leaf);color:#fff}
 .p-later{background:transparent !important;border:2px solid var(--line2) !important;color:var(--muted);font-weight:500 !important}
+/* 新手清單 */
+.onb{margin:0 12px 12px;background:var(--card);border:2px solid var(--line);border-radius:20px;padding:12px 14px 6px}
+.onb-head{display:flex;justify-content:space-between;align-items:center}
+.onb-head b{font-size:15px}
+.onb-x{min-height:36px;border:none;background:transparent;color:var(--muted);font-size:13px;padding:0 6px}
+.onb-step{display:flex;align-items:center;gap:12px;width:100%;min-height:56px;padding:6px 2px;border:none;background:transparent;color:var(--ink);text-align:left}
+.onb-step + .onb-step{border-top:1px solid var(--line)}
+.onb-no{flex:none;width:30px;height:30px;border-radius:50%;border:2px solid var(--line2);display:flex;align-items:center;justify-content:center;font-family:var(--num);font-weight:800;font-size:15px;color:var(--muted)}
+.onb-step.done .onb-no{background:var(--leaf);border-color:var(--leaf);color:#fff}
+.onb-t{flex:1;display:flex;flex-direction:column;gap:2px;font-size:15px;font-weight:500}
+.onb-t span{font-size:12px;color:var(--muted);font-weight:400}
+.onb-step.done .onb-t b{color:var(--muted);text-decoration:line-through;font-weight:500}
+.onb-go{flex:none;font-size:13px;font-weight:900;color:var(--leaf)}
+/* 每週提醒 */
+.nudge{margin:0 12px 12px;background:var(--night);color:#FAF8F2;border-radius:20px;box-shadow:0 0 0 2px var(--grain2);padding:10px 6px 10px 16px;display:flex;align-items:center;gap:10px}
+.nudge-n{font-family:var(--num);font-size:30px;font-weight:800;color:var(--grain);line-height:1}
+.nudge-t{flex:1;font-size:13px;line-height:1.4}
+.nudge .pill-btn{min-height:40px;font-size:13px;padding:0 12px;flex:none}
+.nudge-x{flex:none;width:40px;height:40px;border:none;border-radius:20px;background:transparent;color:var(--top-muted);font-size:16px}
 @media (prefers-reduced-motion:reduce){*{animation:none !important;transition:none !important}}
 </style>
 </head>
@@ -225,7 +251,8 @@ textarea.input{padding:10px 12px;min-height:90px;resize:vertical;line-height:1.5
       </div>
     </div>
     <div class="panel">
-      <div class="hint" id="inboxHint">點一下打開　右滑分類　左滑看過</div>
+      <div id="inboxTop"></div>
+      <div class="hint" id="inboxHint">點一下打開　長按或右滑分類　左滑看過</div>
       <div id="inboxList"></div>
     </div>
   </section>
@@ -244,12 +271,13 @@ textarea.input{padding:10px 12px;min-height:90px;resize:vertical;line-height:1.5
     </div>
     <div class="chip-row" id="granL1"></div>
     <div class="panel" style="margin-top:12px">
+      <div id="granTop"></div>
       <div class="sub-row" id="granL2"></div>
       <div class="bar">
         <div class="seg" id="granStatus"></div>
         <button class="link-btn" type="button" id="granSort"></button>
       </div>
-      <div class="hint" style="padding-top:0">點一下打開　右滑編輯　左滑切換看過</div>
+      <div class="hint" style="padding-top:0">點一下打開　長按或右滑編輯　左滑切換看過</div>
       <div id="granList"></div>
     </div>
   </section>
@@ -288,8 +316,13 @@ textarea.input{padding:10px 12px;min-height:90px;resize:vertical;line-height:1.5
 
 <script>
 'use strict';
-const APP_VERSION = '1.0.0';
+const APP_VERSION = '1.1.0';
 const CHANGELOG = [
+  { v: '1.1.0', d: '2026-10-31', lines: [
+    '【新增】長按一則就能分類；分享卡沒有標題時可以順手補一句；每週提醒放超過一個月還沒看的',
+    '【新增】第一次使用的 3 步清單、待整理示範左右滑；電腦「囤一下」小視窗存好自動關',
+    '【調整】底部導覽文字放大'
+  ] },
   { v: '1.0.0', d: '2026-10-31', lines: [
     '【新增】第一版：從其他 App 分享就能存、待整理（左右滑）、糧倉（搜尋與篩選）、嗑一顆（隨機挑一則）',
     '【新增】多選兩層標籤、看過與心得、看完回來時詢問、貼上多個連結匯入、備份匯出',
@@ -390,6 +423,9 @@ const S = {
   snack: { l1: '', todo: true, old: false, cur: '', spin: 0 },
   undo: null
 };
+// 這台裝置的新手狀態：done＝清單收起、install＝已安裝（手動確認）、demo＝示範過滑動
+const ONB = Object.assign({ done: false, install: false, demo: false }, load('tt_onb', {}));
+function saveOnb() { save('tt_onb', ONB); }
 const tagsTree = () => (S.shared.tags && Array.isArray(S.shared.tags.value)) ? S.shared.tags.value : [];
 const live = () => S.items.filter(x => !x.deleted);
 const byId = id => S.items.find(x => x.id === id);
@@ -508,6 +544,8 @@ const SEED_POS = [[4,4],[30,3],[56,4],[82,3],[104,5],[17,20],[43,21],[69,20],[93
 const SEED_COL = ['var(--grain)', 'var(--grain2)', 'var(--grain3)'];
 function renderInbox() {
   const list = inboxItems();
+  $('#inboxTop').innerHTML = nudgeHtml() + onbHtml();
+  if (list.length && !ONB.demo) setTimeout(maybeDemo, 0);
   $('#inboxNum').textContent = list.length;
   $('#inboxNumText').textContent = list.length ? '顆還沒整理' : '全部收好了';
   const pile = $('#pile');
@@ -533,10 +571,104 @@ function renderInbox() {
   $('#inboxList').innerHTML = list.map(it => rowHtml(it, 'inbox')).join('');
 }
 
+/* ---------- 新手 3 步清單 ---------- */
+const isStandalone = () => (window.matchMedia && matchMedia('(display-mode: standalone)').matches) || navigator.standalone === true;
+const isDesktop = () => !!(window.matchMedia && matchMedia('(hover: hover) and (pointer: fine)').matches);
+let onbShown = false;
+function onbSteps() {
+  const desk = isDesktop();
+  return [
+    { k: 'install', t: desk ? '放好「囤一下」按鈕' : '安裝 App',
+      d: desk ? '拖到書籤列，看網頁時按一下就能存' : '裝好後，分享選單才會出現囤囤の森',
+      done: ONB.install || isStandalone() },
+    { k: 'cloud', t: '設定雲端同步', d: '要手機、電腦一起用才需要，可以晚點再弄', done: !!(S.sync.url && S.sync.lastOk) },
+    { k: 'save', t: '試存一則', d: '在 YouTube 等 App 按分享，或按右上「存」', done: live().length > 0 }
+  ];
+}
+function onbHtml() {
+  if (ONB.done) return '';
+  const steps = onbSteps();
+  const left = steps.filter(s => !s.done).length;
+  if (!left) {
+    // 全部完成：一開始就完成（舊使用者）就默默收起；做完的當下才恭喜
+    if (SHEET) return '';
+    ONB.done = true; saveOnb();
+    if (onbShown) setTimeout(() => toast('3 步都完成了，開始囤吧！'), 400);
+    return '';
+  }
+  onbShown = true;
+  return '<div class="onb"><div class="onb-head"><b>開始囤之前，3 步就好</b>' +
+    '<button type="button" class="onb-x" data-act="onbX">收起清單</button></div>' +
+    steps.map((s, i) => '<button type="button" class="onb-step' + (s.done ? ' done' : '') + '" data-act="onb" data-k="' + s.k + '"' + (s.done ? ' aria-disabled="true"' : '') + '>' +
+      '<span class="onb-no">' + (s.done ? '✓' : i + 1) + '</span>' +
+      '<span class="onb-t"><b>' + s.t + '</b><span>' + s.d + '</span></span>' +
+      (s.done ? '' : '<span class="onb-go">去做 ›</span>') + '</button>').join('') + '</div>';
+}
+let installEvt = null;
+window.addEventListener('beforeinstallprompt', e => { if (ONB.done) return; e.preventDefault(); installEvt = e; });
+window.addEventListener('appinstalled', () => { ONB.install = true; saveOnb(); render(); });
+function onbAction(k) {
+  if (k === 'cloud') { go('settings'); toast('填好網址和通行碼，按「儲存並測試」', [], 5000); return; }
+  if (k === 'save') { openAdd(); return; }
+  const markDone = () => { ONB.install = true; saveOnb(); closeSheet(); render(); };
+  if (isDesktop()) {
+    sheet('<h3>放好「囤一下」按鈕</h3><div style="font-size:14px;line-height:1.6;color:var(--muted)">把黃色按鈕拖到瀏覽器的書籤列（沒看到書籤列：Ctrl＋Shift＋B）。之後看到想存的網頁，按一下就會跳出小視窗存好、自動關掉。</div>' +
+      '<div><a class="bookmarklet" href="' + esc(bookmarkletHref()) + '" onclick="event.preventDefault()">囤一下</a></div>' +
+      '<div class="btns"><button type="button" class="btn line" style="flex:1" data-sh="close">等一下</button><button type="button" class="btn leaf" style="flex:1" data-sh="ok">放好了</button></div>', { ok: markDone });
+    return;
+  }
+  if (installEvt) {
+    const ev = installEvt;
+    installEvt = null;
+    ev.prompt();
+    ev.userChoice.then(c => { if (c && c.outcome === 'accepted') { ONB.install = true; saveOnb(); render(); } }).catch(() => {});
+    return;
+  }
+  sheet('<h3>安裝 App</h3><div style="font-size:14px;line-height:1.7;color:var(--muted)">用 Chrome 打開這個網頁 → 右上角「⋮」→「<b style="color:var(--ink)">安裝應用程式</b>」（或「加到主畫面」再選安裝）。<br>裝好後從桌面的圖示打開，其他 App 的分享選單就會出現「囤囤の森」。</div>' +
+    '<div class="btns"><button type="button" class="btn line" style="flex:1" data-sh="close">等一下</button><button type="button" class="btn leaf" style="flex:1" data-sh="ok">已經裝好了</button></div>', { ok: markDone });
+}
+
+/* ---------- 第一次進待整理：示範左右滑 ---------- */
+function maybeDemo() {
+  if (ONB.demo || SHEET || IS_POPUP || S.screen !== 'inbox') return;
+  const row = $('#inboxList .row');
+  if (!row) return;
+  ONB.demo = true; saveOnb();
+  if (window.matchMedia && matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+  const fg = $('.row-fg', row);
+  const at = (ms, fn) => setTimeout(() => { if (!sw) fn(); }, ms);
+  at(500, () => { toast('右滑分類、左滑看過，長按也能分類', [], 4000); row.classList.add('demo', 'go-r'); fg.style.transform = 'translateX(72px)'; });
+  at(1250, () => { fg.style.transform = ''; });
+  at(1750, () => { row.classList.remove('go-r'); row.classList.add('go-l'); fg.style.transform = 'translateX(-72px)'; });
+  at(2500, () => { fg.style.transform = ''; });
+  setTimeout(() => row.classList.remove('demo', 'go-l', 'go-r'), 3000);
+}
+
+/* ---------- 每週提醒：放超過一個月還沒看的 ---------- */
+const NUDGE_EVERY = 7 * DAY, NUDGE_OLD = 30 * DAY;
+let NUDGE = 0;
+function checkNudge() {
+  if (NUDGE) return;
+  if (now() - load('tt_nudge', 0) < NUDGE_EVERY) return;
+  const n = live().filter(it => !it.seen && it.savedAt && it.savedAt < now() - NUDGE_OLD).length;
+  if (!n) return;
+  NUDGE = n;
+  save('tt_nudge', now());
+  if (!SHEET) render();
+}
+function nudgeHtml() {
+  if (!NUDGE) return '';
+  return '<div class="nudge" role="status"><span class="nudge-n">' + NUDGE + '</span>' +
+    '<span class="nudge-t">顆放超過一個月了，<br>還沒吃</span>' +
+    '<button type="button" class="pill-btn" data-act="nudgeGo">挑一顆</button>' +
+    '<button type="button" class="nudge-x" data-act="nudgeX" aria-label="關掉提醒">✕</button></div>';
+}
+
 /* ---------- 糧倉 ---------- */
 function inL1(it, l1) { return (it.tags || []).some(t => t === l1 || t.indexOf(l1 + SEP) === 0); }
 function renderGranary() {
   const g = S.gran, all = live(), T = tagsTree();
+  $('#granTop').innerHTML = nudgeHtml();
   $('#granTotal').textContent = all.length;
   if ($('#granQ').value !== g.q) $('#granQ').value = g.q;
   $('#granL1').innerHTML = '<button type="button" class="chip-top' + (g.l1 ? '' : ' on') + '" data-gl1="">全部<small>' + all.length + '</small></button>' +
@@ -664,7 +796,7 @@ function renderSettings() {
       optHtml('shareMode', 'full', '直接打開完整分類', '每次都選好再存') + '</div>' +
     '<div class="card"><h2>外觀</h2>' + optHtml('theme', 'system', '跟隨系統', '手機深色模式時自動變深色') + optHtml('theme', 'light', '淺色', '') + optHtml('theme', 'dark', '深色', '') + '</div>' +
 
-    '<div class="card"><h2>在電腦上收藏</h2><p>把下面的黃色按鈕拖到瀏覽器的書籤列。看到想存的網頁時按一下，就會跳出囤囤の森存好。</p>' +
+    '<div class="card"><h2>在電腦上收藏</h2><p>把下面的黃色按鈕拖到瀏覽器的書籤列。看到想存的網頁時按一下，就會跳出小視窗存好，存完自動關掉。</p>' +
       '<a class="bookmarklet" href="' + esc(bookmarkletHref()) + '" onclick="event.preventDefault()">囤一下</a>' +
       '<p class="small" style="margin:10px 0 0">手機上不用這個，直接用分享選單就好。</p></div>' +
 
@@ -689,11 +821,22 @@ let sw = null;
 function swipeStart(e) {
   const fg = e.target.closest('.row-fg');
   if (!fg || e.target.closest('button') || (e.pointerType === 'mouse' && e.button !== 0)) return;
-  sw = { fg: fg, row: fg.parentElement, id: fg.dataset.id, x0: e.clientX, y0: e.clientY, dx: 0, lock: null, pid: e.pointerId };
+  const s = sw = { fg: fg, row: fg.parentElement, id: fg.dataset.id, x0: e.clientX, y0: e.clientY, dx: 0, lock: null, pid: e.pointerId };
+  // 長按 0.5 秒＝打開整理面板（手機震一下）
+  s.row.classList.add('pressing');
+  s.lt = setTimeout(() => {
+    if (sw !== s || s.lock) return;
+    sw = null;
+    s.row.classList.remove('pressing');
+    try { if (navigator.vibrate) navigator.vibrate(25); } catch (err) { /* 略過 */ }
+    openOrganize(s.id);
+  }, 500);
 }
+function stopPress(s) { clearTimeout(s.lt); s.row.classList.remove('pressing'); }
 function swipeMove(e) {
   if (!sw || e.pointerId !== sw.pid) return;
   const dx = e.clientX - sw.x0, dy = e.clientY - sw.y0;
+  if (Math.abs(dx) > 8 || Math.abs(dy) > 8) stopPress(sw);
   if (!sw.lock) {
     if (Math.abs(dx) > 10 && Math.abs(dx) > Math.abs(dy) * 1.2) {
       sw.lock = 'x';
@@ -714,6 +857,7 @@ function swipeMove(e) {
 function swipeEnd(e) {
   if (!sw || e.pointerId !== sw.pid) return;
   const s = sw; sw = null;
+  stopPress(s);
   const mode = s.row.dataset.mode;
   if (s.lock === 'x') {
     s.row.classList.remove('dragging');
@@ -730,6 +874,7 @@ function swipeEnd(e) {
 }
 function swipeCancel() {
   if (!sw) return;
+  stopPress(sw);
   sw.row.classList.remove('dragging', 'go-r', 'go-l');
   sw.fg.style.transform = '';
   sw = null;
@@ -740,6 +885,8 @@ function swipeCancel() {
   el.addEventListener('pointermove', swipeMove);
   el.addEventListener('pointerup', swipeEnd);
   el.addEventListener('pointercancel', swipeCancel);
+  // 長按時不要跳出瀏覽器的選單
+  el.addEventListener('contextmenu', e => { if (e.target.closest('.row-fg')) e.preventDefault(); });
   el.addEventListener('keydown', e => {
     const fg = e.target.closest('.row-fg');
     if (fg && (e.key === 'Enter' || e.key === ' ')) { e.preventDefault(); openLink(fg.dataset.id); }
@@ -945,6 +1092,7 @@ function handleIncoming(params) {
   const r = addLink(url, title.slice(0, 200));
   go('inbox');
   if (r.dup) {
+    lastToast = '這則已經囤過了';
     sheet('<h3>這則已經囤過了</h3><div style="font-size:14px;line-height:1.5">' + esc(r.item.title || r.item.url) + '</div>' +
       '<div class="small">' + fmtWhen(r.item.savedAt) + ' 存的' + (r.item.tags.length ? '，在 ' + esc(r.item.tags.join('、')) : '，還在待整理') + '</div>' +
       '<div class="btns"><button type="button" class="btn line" style="flex:1" data-sh="close">好</button>' +
@@ -967,14 +1115,29 @@ function openShareCard(id) {
   };
   const it = byId(id);
   sheet('<div style="display:flex;justify-content:space-between;align-items:center"><span style="font-size:18px;font-weight:900">囤好了！</span><span class="small" id="shHint"></span></div>' +
-    '<div style="font-size:14px;color:var(--muted);line-height:1.5" id="shTitle">' + esc(it.title || platOf(it.url).name + ' 的連結（標題抓取中）') + '</div>' +
+    '<div style="font-size:14px;color:var(--muted);line-height:1.5" id="shTitle">' + esc(it.title || platOf(it.url).name + ' 的連結' + (S.sync.url ? '（標題抓取中）' : '')) + '</div>' +
+    (it.title ? '' : '<input class="input" id="shName" maxlength="300" enterkeyhint="done" placeholder="這是什麼？（可略過）" aria-label="這是什麼？補一句之後才找得到">') +
     '<div class="lbl">順便分類？可以點好幾個</div>' +
     '<div style="display:flex;flex-wrap:wrap;gap:8px" id="shChips"></div>' +
     '<button type="button" class="btn" style="min-height:52px;font-size:16px" data-sh="done" id="shDone"></button>' +
     '<div class="small" style="text-align:center">存好後按手機的「返回」，就會回到原本的 App</div>', {
     done: () => shareDone(),
-    more: () => { clearInterval(SHARE.iv); const sel = SHARE.sel.slice(); SHARE = null; openOrganize(id, { sel: sel, fromShare: true }); }
+    more: () => {
+      clearInterval(SHARE.iv);
+      const sel = SHARE.sel.slice(), name = shareName();
+      SHARE = null;
+      if (name) patchItem(id, { title: name }, true);
+      openOrganize(id, { sel: sel, fromShare: true });
+    }
   }, () => { if (SHARE) { clearInterval(SHARE.iv); SHARE = null; } });
+  const nm = $('#shName');
+  if (nm) {
+    // 點輸入框就停止倒數，等你按完成
+    const stop = () => { if (SHARE && !SHARE.touched) { SHARE.touched = true; renderChips(); } };
+    nm.addEventListener('focus', stop);
+    nm.addEventListener('input', stop);
+    nm.addEventListener('keydown', e => { if (e.key === 'Enter') { e.preventDefault(); shareDone(); } });
+  }
   $('#shChips').addEventListener('click', e => {
     const b = e.target.closest('[data-path]');
     if (!b || !SHARE) return;
@@ -990,22 +1153,35 @@ function openShareCard(id) {
     if (SHARE.left <= 0) shareDone(); else renderChips();
   }, 1000);
 }
+function shareName() { const el = $('#shName'); return el ? el.value.trim().slice(0, 300) : ''; }
 function shareDone() {
   if (!SHARE) return;
   clearInterval(SHARE.iv);
   const { id, sel } = SHARE;
+  const name = shareName();
   SHARE = null;
-  closeSheet();
   const tags = cleanTags(sel);
-  if (tags.length) {
-    const before = patchItem(id, { tags: tags }, true);
-    pushRecent(tags);
-    render();
-    toast('收進 ' + tags.join('、'), [{ label: '復原', fn: () => restore(before) }]);
-  } else {
-    render();
-    toast('存進待整理了');
-  }
+  const patch = {};
+  if (tags.length) patch.tags = tags;
+  if (name && byId(id) && !byId(id).title) patch.title = name;
+  const before = Object.keys(patch).length ? patchItem(id, patch, true) : null;
+  if (tags.length) pushRecent(tags);
+  closeSheet();
+  render();
+  if (tags.length) toast('收進 ' + tags.join('、'), [{ label: '復原', fn: () => restore(before) }]);
+  else toast('存進待整理了');
+}
+
+/* ---------- 電腦「囤一下」開的小視窗：存好自動關 ---------- */
+const IS_POPUP = window.name === 'tuntun';
+let popupArmed = false;
+function popupFinish() {
+  if (!popupArmed || SHEET) return;
+  popupArmed = false;
+  let keep = false;
+  const msg = (lastToast || '存好了').replace(/。$/, '');
+  toast(msg + '，視窗 2 秒後關閉', [{ label: '先不要關', fn: () => { keep = true; } }], 2600);
+  setTimeout(() => { if (!keep) window.close(); }, 2000);
 }
 
 /* ================= 手動存 ================= */
@@ -1202,17 +1378,22 @@ function closeSheet(replacing) {
   if (s.onClose) s.onClose();
   if (!replacing && history.state && history.state.sheet) { ignorePop++; history.back(); }
   if (s.prevFocus && s.prevFocus.focus) try { s.prevFocus.focus(); } catch (e) { /* 略過 */ }
+  if (!replacing && popupArmed) setTimeout(popupFinish, 30);
 }
 // 手機的「返回」鍵：有面板時先關面板
 window.addEventListener('popstate', () => {
   if (ignorePop > 0) { ignorePop--; return; }
-  if (SHEET) { const s = SHEET; SHEET = null; $('#sheetRoot').innerHTML = ''; if (s.onClose) s.onClose(); }
+  if (SHEET) {
+    const s = SHEET; SHEET = null; $('#sheetRoot').innerHTML = ''; if (s.onClose) s.onClose();
+    if (popupArmed) setTimeout(popupFinish, 30);
+  }
 });
 document.addEventListener('keydown', e => { if (e.key === 'Escape' && SHEET) closeSheet(); });
 
-let toastTimer = null;
+let toastTimer = null, lastToast = '';
 function toast(text, acts, ms) {
   clearTimeout(toastTimer);
+  lastToast = text;
   acts = acts || [];
   $('#toastRoot').innerHTML = '<div class="toast"><span>' + esc(text) + '</span><div class="toast-acts">' +
     acts.map((a, i) => '<button type="button" data-ti="' + i + '">' + esc(a.label) + '</button>').join('') + '</div></div>';
@@ -1297,7 +1478,8 @@ async function syncNow() {
     S.sync.lastErr = '';
     persistSync();
     if (changed) { persistItems(); save('tt_shared', S.shared); }
-    if (changed && !SHEET) render(); else renderSync();
+    if (!SHEET && (changed || !ONB.done)) render(); else renderSync();
+    if (changed) checkNudge();
     runMetaQueue();
   } catch (e) {
     S.sync.lastErr = e.message;
@@ -1358,7 +1540,11 @@ async function runMetaQueue() {
         if (Object.keys(patch).length) {
           patchItem(id, patch, true);
           const st = $('#shTitle');
-          if (st && SHARE && SHARE.id === id && patch.title) st.textContent = patch.title;
+          if (st && SHARE && SHARE.id === id && patch.title) {
+            st.textContent = patch.title;
+            const nm = $('#shName');
+            if (nm && !nm.value.trim() && document.activeElement !== nm) nm.remove();
+          }
           if (!SHEET) render();
         }
       } catch (e) { /* 抓不到就算了，之後可手動補 */ }
@@ -1395,6 +1581,10 @@ document.addEventListener('click', async e => {
   const act = b.dataset.act;
   if (act === 'org') openOrganize(b.dataset.id);
   else if (act === 'add') openAdd();
+  else if (act === 'onb') { if (b.getAttribute('aria-disabled') !== 'true') onbAction(b.dataset.k); }
+  else if (act === 'onbX') { ONB.done = true; saveOnb(); render(); toast('收起來了'); }
+  else if (act === 'nudgeGo') { NUDGE = 0; Object.assign(S.snack, { l1: '', todo: true, old: true, cur: '' }); go('snack'); }
+  else if (act === 'nudgeX') { NUDGE = 0; render(); }
   else if (act === 'more') { S.gran.limit += 60; renderGranary(); }
   else if (act === 'reroll') { snackPick(true); renderSnack(); }
   else if (act === 'eat') openLink(b.dataset.id);
@@ -1436,7 +1626,7 @@ document.addEventListener('click', async e => {
   else if (act === 'wipe') {
     const ok = await askConfirm('清除這台裝置的資料？', '這台裝置上的 ' + live().length + ' 則收藏、標籤與設定都會清掉。' + (S.sync.url ? '雲端試算表裡的不會被刪，之後重新填網址就能同步回來。' : '<b>你沒有設定雲端，清掉就找不回來了，建議先匯出備份。</b>'), '清除', true);
     if (!ok) return;
-    ['tt_items', 'tt_shared', 'tt_pref', 'tt_sync', 'tt_recent', 'tt_meta', 'tt_last'].forEach(k => localStorage.removeItem(k));
+    ['tt_items', 'tt_shared', 'tt_pref', 'tt_sync', 'tt_recent', 'tt_meta', 'tt_last', 'tt_onb', 'tt_nudge'].forEach(k => localStorage.removeItem(k));
     location.reload();
   }
 });
@@ -1461,6 +1651,7 @@ function applyTheme() {
 document.addEventListener('visibilitychange', () => {
   if (document.visibilityState === 'visible') {
     checkReturn();
+    checkNudge();
     scheduleSync(300);
   }
 });
@@ -1475,9 +1666,10 @@ setInterval(() => { if (document.visibilityState === 'visible') scheduleSync(0);
   const params = new URLSearchParams(location.search);
   const incoming = params.has('url') || params.has('text') || params.has('title');
   if (incoming) history.replaceState(null, '', location.pathname);
+  if (incoming && IS_POPUP) { popupArmed = true; lastToast = ''; }
   go(S.pref.home === 'granary' && !incoming ? 'granary' : 'inbox');
   if (incoming) handleIncoming(params);
-  else checkReturn();
+  else { checkReturn(); checkNudge(); }
   if (S.sync.url) scheduleSync(500);
   if ('serviceWorker' in navigator) navigator.serviceWorker.register('sw.js').catch(() => { /* 本機開檔時沒有 SW，照常可用 */ });
 })();

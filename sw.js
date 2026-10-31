@@ -1,7 +1,7 @@
-/* 囤囤の森 service worker — v1.0.0（2026-10-31）
+/* 囤囤の森 service worker — v1.1.0（2026-10-31）
  * 讓網頁離線也能打開、能從分享選單存入。
  * 改版時把 CACHE 的版本號一起改，舊快取才會被換掉。 */
-const CACHE = 'tuntun-v1.0.0';
+const CACHE = 'tuntun-v1.1.0';
 const SHELL = ['./', './index.html', './manifest.webmanifest', './icon-192.png', './icon-512.png', './icon-maskable-512.png'];
 
 self.addEventListener('install', e => {
