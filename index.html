@@ -1,9 +1,12 @@
 <!doctype html>
 <!--
   囤囤の森 — 隨手收藏網路上的影片、文章、貼文
-  版本：v1.1.0（2026-10-31）
+  版本：v1.2.0（2026-11-01）
 
   更新紀錄（最近三版，完整紀錄見規格檔）
+  v1.2.0（2026-11-01）
+    【新增】整理面板每個主分類後面多一顆「＋」，點了直接打次分類名稱，不用再打主分類
+    【調整】下方輸入框改成「＋ 新增主分類」，點了才出現
   v1.1.0（2026-10-31）
     【新增】長按一則就能分類；分享卡沒有標題時可以順手補一句；每週提醒放超過一個月還沒看的
     【新增】第一次使用的 3 步清單、待整理示範左右滑；電腦「囤一下」小視窗存好自動關
@@ -19,7 +22,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <meta name="theme-color" content="#23314F">
 <meta name="description" content="隨手收藏網路上的影片、文章、貼文">
-<title>囤囤の森 v1.1.0</title>
+<title>囤囤の森 v1.2.0</title>
 <link rel="manifest" href="manifest.webmanifest">
 <link rel="icon" href="icon-192.png">
 <link rel="apple-touch-icon" href="icon-192.png">
@@ -127,6 +130,11 @@ button{cursor:pointer}
 .chip.on{background:var(--ink);border-color:var(--ink);color:var(--panel)}
 .chip.part{background:var(--chip);border-color:var(--ink)}
 .chip.dash{border-style:dashed;background:transparent;color:var(--muted)}
+.kid-plus{min-width:40px;padding:0;font-size:18px;line-height:1}
+.kid-add{display:inline-flex;align-items:center;gap:4px;border:2px solid var(--leaf);border-radius:18px;padding:0 4px 0 12px;min-height:40px;background:var(--card)}
+.kid-in{width:7.5em;border:none;background:transparent;font-size:14px;color:var(--ink);min-height:34px;outline:none}
+.kid-ok{min-height:32px;padding:0 10px;border:none;border-radius:16px;background:var(--leaf);color:#fff;font-size:13px;font-weight:900}
+.kid-x{width:32px;height:32px;border:none;border-radius:16px;background:transparent;color:var(--muted);font-size:14px}
 
 /* 嗑一顆 */
 .snack{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:16px 20px calc(110px + env(safe-area-inset-bottom));gap:18px}
@@ -316,8 +324,12 @@ textarea.input{padding:10px 12px;min-height:90px;resize:vertical;line-height:1.5
 
 <script>
 'use strict';
-const APP_VERSION = '1.1.0';
+const APP_VERSION = '1.2.0';
 const CHANGELOG = [
+  { v: '1.2.0', d: '2026-11-01', lines: [
+    '【新增】整理面板每個主分類後面多一顆「＋」，點了直接打次分類名稱，不用再打主分類',
+    '【調整】下方輸入框改成「＋ 新增主分類」，點了才出現'
+  ] },
   { v: '1.1.0', d: '2026-10-31', lines: [
     '【新增】長按一則就能分類；分享卡沒有標題時可以順手補一句；每週提醒放超過一個月還沒看的',
     '【新增】第一次使用的 3 步清單、待整理示範左右滑；電腦「囤一下」小視窗存好自動關',
@@ -971,12 +983,18 @@ function openNote(id) {
 
 /* ================= 整理面板 ================= */
 let ORG = null;
-function chipsHtml(sel) {
+function chipsHtml(sel, adding, draft) {
   return tagsTree().map(t => {
     const part = sel.some(p => p.indexOf(t.n + SEP) === 0);
+    // 每個主分類最後一顆「＋」：點了就地輸入次分類，不用再打主分類
+    const add = adding === t.n
+      ? '<span class="kid-add"><input class="kid-in" id="orgKid" maxlength="12" enterkeyhint="done" value="' + esc(draft || '') + '" placeholder="新的次分類" aria-label="在「' + esc(t.n) + '」底下新增次分類">' +
+        '<button type="button" class="kid-ok" data-kidok="' + esc(t.n) + '">加入</button>' +
+        '<button type="button" class="kid-x" data-kidx="1" aria-label="取消">✕</button></span>'
+      : '<button type="button" class="chip sm dash kid-plus" data-addk="' + esc(t.n) + '" aria-label="在「' + esc(t.n) + '」底下新增次分類">＋</button>';
     return '<div class="group"><button type="button" class="chip l1' + (sel.indexOf(t.n) >= 0 ? ' on' : (part ? ' part' : '')) + '" data-path="' + esc(t.n) + '" aria-pressed="' + (sel.indexOf(t.n) >= 0) + '">' + esc(t.n) + '</button>' +
       t.c.map(c => { const p = t.n + SEP + c; return '<button type="button" class="chip sm' + (sel.indexOf(p) >= 0 ? ' on' : '') + '" data-path="' + esc(p) + '" aria-pressed="' + (sel.indexOf(p) >= 0) + '">' + esc(c) + '</button>'; }).join('') +
-      '</div>';
+      add + '</div>';
   }).join('');
 }
 function toggleSel(sel, path) {
@@ -1004,14 +1022,15 @@ function openOrganize(id, opts) {
   const it = byId(id);
   if (!it) return;
   closePrompt();
-  ORG = { id: id, sel: (opts.sel || it.tags || []).slice(), seen: !!it.seen, fromShare: !!opts.fromShare };
+  ORG = { id: id, sel: (opts.sel || it.tags || []).slice(), seen: !!it.seen, fromShare: !!opts.fromShare, adding: '' };
   sheet(
     '<label class="lbl" for="orgTitle">標題</label>' +
     '<input class="input" id="orgTitle" value="' + esc(it.title) + '" placeholder="' + (it.title ? '' : '沒抓到標題，補一句之後才找得到') + '" maxlength="300">' +
     '<div class="small" style="margin-top:-6px;word-break:break-all">' + esc(platOf(it.url).name) + '　' + esc(it.url.length > 70 ? it.url.slice(0, 70) + '…' : it.url) + '</div>' +
     '<div class="lbl">收進哪些糧倉？可以多選</div>' +
     '<div class="groups" id="orgChips">' + chipsHtml(ORG.sel) + '</div>' +
-    '<div style="display:flex;gap:8px"><input class="input" id="orgNew" placeholder="新標籤，例如 AI技巧/影片" aria-label="新增標籤" style="flex:1">' +
+    '<div><button type="button" class="chip dash" data-sh="newL1" id="orgNewBtn">＋ 新增主分類</button></div>' +
+    '<div style="display:flex;gap:8px" class="hide" id="orgNewRow"><input class="input" id="orgNew" maxlength="25" enterkeyhint="done" placeholder="主分類名稱，例如 閱讀" aria-label="新增主分類" style="flex:1">' +
     '<button type="button" class="btn line" data-sh="addTag">加入</button></div>' +
     '<div class="small" id="orgSel"></div>' +
     '<button type="button" class="switch" id="orgSeen" aria-pressed="' + ORG.seen + '"><span>已經看過了</span><span class="track"><i></i></span></button>' +
@@ -1029,7 +1048,16 @@ function openOrganize(id, opts) {
         if (!p) return;
         $('#orgNew').value = '';
         if (ORG.sel.indexOf(p) < 0) ORG.sel = toggleSel(ORG.sel, p);
+        $('#orgNewRow').classList.add('hide');
+        $('#orgNewBtn').classList.remove('hide');
         refreshOrg();
+      },
+      newL1: () => {
+        ORG.adding = '';
+        refreshOrg();
+        $('#orgNewBtn').classList.add('hide');
+        $('#orgNewRow').classList.remove('hide');
+        $('#orgNew').focus();
       },
       finish: () => {
         const title = $('#orgTitle').value.trim();
@@ -1053,11 +1081,29 @@ function openOrganize(id, opts) {
       },
       refetch: () => { delete S.metaTried[id]; save('tt_meta', S.metaTried); queueMeta(id); toast('重新抓標題中…'); closeSheet(); }
     });
+  const kidAdd = l1 => {
+    const v = ($('#orgKid') ? $('#orgKid').value : '').replace(/[\/／>＞]/g, '').trim();
+    ORG.adding = '';
+    if (v) {
+      const p = addTagPath(l1 + SEP + v);
+      if (p && ORG.sel.indexOf(p) < 0) ORG.sel = toggleSel(ORG.sel, p);
+    }
+    refreshOrg();
+  };
   $('#orgChips').addEventListener('click', e => {
-    const b = e.target.closest('[data-path]');
+    let b;
+    if ((b = e.target.closest('[data-addk]'))) { ORG.adding = b.dataset.addk; refreshOrg(); const k = $('#orgKid'); if (k) k.focus(); return; }
+    if ((b = e.target.closest('[data-kidok]'))) { kidAdd(b.dataset.kidok); return; }
+    if (e.target.closest('[data-kidx]')) { ORG.adding = ''; refreshOrg(); return; }
+    b = e.target.closest('[data-path]');
     if (!b) return;
     ORG.sel = toggleSel(ORG.sel, b.dataset.path);
     refreshOrg();
+  });
+  $('#orgChips').addEventListener('keydown', e => {
+    if (e.target.id !== 'orgKid') return;
+    if (e.key === 'Enter') { e.preventDefault(); kidAdd(ORG.adding); }
+    else if (e.key === 'Escape') { e.stopPropagation(); ORG.adding = ''; refreshOrg(); }
   });
   $('#orgSeen').addEventListener('click', () => {
     ORG.seen = !ORG.seen;
@@ -1068,7 +1114,9 @@ function openOrganize(id, opts) {
   refreshOrg();
 }
 function refreshOrg() {
-  $('#orgChips').innerHTML = chipsHtml(ORG.sel);
+  const k = $('#orgKid'), draft = k ? k.value : '', hadFocus = k && document.activeElement === k;
+  $('#orgChips').innerHTML = chipsHtml(ORG.sel, ORG.adding, draft);
+  if (hadFocus && $('#orgKid')) $('#orgKid').focus();
   const tags = cleanTags(ORG.sel);
   $('#orgSel').textContent = tags.length ? '已選：' + tags.join('、') : '還沒選（不選就先留在待整理）';
   $('#orgFinish').textContent = tags.length ? '收進糧倉（' + tags.length + ' 個）' : '完成';
