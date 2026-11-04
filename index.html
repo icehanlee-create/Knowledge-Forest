@@ -1,9 +1,13 @@
 <!doctype html>
 <!--
   囤囤の森 — 隨手收藏網路上的影片、文章、貼文
-  版本：v1.2.0（2026-11-01）
+  版本：v1.3.0（2026-11-04）
 
   更新紀錄（最近三版，完整紀錄見規格檔）
+  v1.3.0（2026-11-04）
+    【新增】設定頁次分類可以排序：點「⇅ 排序」後按住 ⠿ 拖曳或按 ↑↓
+    【調整】分享進來時，標題還在抓就先等（最多 10 秒）再倒數；連線失敗的下次打開 App 自動重抓
+    【調整】「重抓標題」移到標題欄旁邊，按了不用關面板，抓到直接填入
   v1.2.0（2026-11-01）
     【新增】整理面板每個主分類後面多一顆「＋」，點了直接打次分類名稱，不用再打主分類
     【調整】下方輸入框改成「＋ 新增主分類」，點了才出現
@@ -11,10 +15,6 @@
     【新增】長按一則就能分類；分享卡沒有標題時可以順手補一句；每週提醒放超過一個月還沒看的
     【新增】第一次使用的 3 步清單、待整理示範左右滑；電腦「囤一下」小視窗存好自動關
     【調整】底部導覽文字放大
-  v1.0.0（2026-10-31）
-    【新增】第一版：從其他 App 分享就能存、待整理（左右滑）、糧倉（搜尋與篩選）、嗑一顆（隨機挑一則）
-    【新增】多選兩層標籤、看過與心得、看完回來時詢問、貼上多個連結匯入、備份匯出
-    【新增】離線也能存；設定 Google 試算表後手機與電腦自動同步
 -->
 <html lang="zh-Hant">
 <head>
@@ -22,7 +22,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <meta name="theme-color" content="#23314F">
 <meta name="description" content="隨手收藏網路上的影片、文章、貼文">
-<title>囤囤の森 v1.2.0</title>
+<title>囤囤の森 v1.3.0</title>
 <link rel="manifest" href="manifest.webmanifest">
 <link rel="icon" href="icon-192.png">
 <link rel="apple-touch-icon" href="icon-192.png">
@@ -176,6 +176,13 @@ textarea.input{padding:10px 12px;min-height:90px;resize:vertical;line-height:1.5
 .tt-kid{display:inline-flex;align-items:center;gap:2px;background:var(--chip);border-radius:16px;padding:0 4px 0 12px;min-height:34px;font-size:13px}
 .icon-btn{width:36px;height:36px;border:none;border-radius:18px;background:transparent;color:var(--muted);display:inline-flex;align-items:center;justify-content:center;font-size:15px}
 .icon-btn:hover{background:var(--line)}
+.icon-btn:disabled{opacity:.3}
+.sk-list{display:flex;flex-direction:column;gap:6px;margin-top:8px}
+.sk-row{display:flex;align-items:center;gap:4px;background:var(--chip);border-radius:14px;min-height:46px;padding:0 4px 0 0;font-size:14px}
+.sk-grip{width:44px;align-self:stretch;display:flex;align-items:center;justify-content:center;font-size:20px;color:var(--muted);cursor:grab;touch-action:none;user-select:none;-webkit-user-select:none}
+.sk-name{flex:1}
+.sk-row.dragging{background:var(--card);box-shadow:0 0 0 2px var(--leaf),0 6px 16px rgba(14,20,36,.18);position:relative;z-index:2}
+.sk-row.dragging .sk-grip{cursor:grabbing;color:var(--leaf)}
 .small{font-size:12px;color:var(--muted);line-height:1.6}
 .bookmarklet{display:inline-flex;align-items:center;min-height:40px;padding:0 14px;border-radius:20px;background:var(--grain);color:#23314F;font-weight:900;text-decoration:none}
 .foot{text-align:center;padding:4px 0 20px}
@@ -324,8 +331,13 @@ textarea.input{padding:10px 12px;min-height:90px;resize:vertical;line-height:1.5
 
 <script>
 'use strict';
-const APP_VERSION = '1.2.0';
+const APP_VERSION = '1.3.0';
 const CHANGELOG = [
+  { v: '1.3.0', d: '2026-11-04', lines: [
+    '【新增】設定頁次分類可以排序：點「⇅ 排序」後按住 ⠿ 拖曳或按 ↑↓',
+    '【調整】分享進來時，標題還在抓就先等（最多 10 秒）再倒數；連線失敗的下次打開 App 自動重抓',
+    '【調整】「重抓標題」移到標題欄旁邊，按了不用關面板，抓到直接填入'
+  ] },
   { v: '1.2.0', d: '2026-11-01', lines: [
     '【新增】整理面板每個主分類後面多一顆「＋」，點了直接打次分類名稱，不用再打主分類',
     '【調整】下方輸入框改成「＋ 新增主分類」，點了才出現'
@@ -780,11 +792,21 @@ function renderSettings() {
       '<button type="button" class="icon-btn" data-tg="down" data-i="' + i + '" aria-label="往下移"' + (i < T.length - 1 ? '' : ' disabled') + '>↓</button>' +
       '<button type="button" class="icon-btn" data-tg="ren" data-i="' + i + '" aria-label="改名">✎</button>' +
       '<button type="button" class="icon-btn" data-tg="del" data-i="' + i + '" aria-label="刪除">✕</button></div>' +
-      '<div class="tt-kids">' + t.c.map((c, j) =>
-        '<span class="tt-kid">' + esc(c) +
-        '<button type="button" class="icon-btn" style="width:30px;height:30px" data-tg="renk" data-i="' + i + '" data-j="' + j + '" aria-label="改名 ' + esc(c) + '">✎</button>' +
-        '<button type="button" class="icon-btn" style="width:30px;height:30px" data-tg="delk" data-i="' + i + '" data-j="' + j + '" aria-label="刪除 ' + esc(c) + '">✕</button></span>').join('') +
-      '<button type="button" class="chip sm dash" data-tg="addk" data-i="' + i + '">＋ 細分類</button></div></div>').join('');
+      (SORTK === t.n
+        // 排序模式：直排清單，按住左邊 ⠿ 拖曳，或按 ↑↓
+        ? '<div class="sk-list" data-i="' + i + '">' + t.c.map((c, j) =>
+            '<div class="sk-row" data-c="' + esc(c) + '"><span class="sk-grip" aria-hidden="true">⠿</span><span class="sk-name">' + esc(c) + '</span>' +
+            '<button type="button" class="icon-btn" data-tg="kup" data-i="' + i + '" data-j="' + j + '" aria-label="' + esc(c) + ' 往上移"' + (j ? '' : ' disabled') + '>↑</button>' +
+            '<button type="button" class="icon-btn" data-tg="kdown" data-i="' + i + '" data-j="' + j + '" aria-label="' + esc(c) + ' 往下移"' + (j < t.c.length - 1 ? '' : ' disabled') + '>↓</button></div>').join('') +
+          '</div><div class="small" style="margin-top:6px">按住左邊 ⠿ 上下拖，或按 ↑↓</div>' +
+          '<button type="button" class="btn leaf" style="margin-top:8px;width:100%" data-tg="sortdone" data-i="' + i + '">排好了</button>'
+        : '<div class="tt-kids">' + t.c.map((c, j) =>
+            '<span class="tt-kid">' + esc(c) +
+            '<button type="button" class="icon-btn" style="width:30px;height:30px" data-tg="renk" data-i="' + i + '" data-j="' + j + '" aria-label="改名 ' + esc(c) + '">✎</button>' +
+            '<button type="button" class="icon-btn" style="width:30px;height:30px" data-tg="delk" data-i="' + i + '" data-j="' + j + '" aria-label="刪除 ' + esc(c) + '">✕</button></span>').join('') +
+          '<button type="button" class="chip sm dash" data-tg="addk" data-i="' + i + '">＋ 次分類</button>' +
+          (t.c.length > 1 ? '<button type="button" class="chip sm dash" data-tg="sortk" data-i="' + i + '">⇅ 排序</button>' : '') + '</div>') +
+      '</div>').join('');
   $('#setPanel').innerHTML =
     '<div class="card"><h2>雲端同步（Google 試算表）</h2>' +
       '<p>不填也能用，資料只存在這台裝置。填好後，手機和電腦會自動同步。</p>' +
@@ -1024,7 +1046,8 @@ function openOrganize(id, opts) {
   closePrompt();
   ORG = { id: id, sel: (opts.sel || it.tags || []).slice(), seen: !!it.seen, fromShare: !!opts.fromShare, adding: '' };
   sheet(
-    '<label class="lbl" for="orgTitle">標題</label>' +
+    '<div style="display:flex;justify-content:space-between;align-items:center;min-height:34px"><label class="lbl" for="orgTitle">標題</label>' +
+      (S.sync.url && !it.title ? '<button type="button" class="link-btn" id="orgRefetch" data-sh="refetch" style="color:var(--leaf);font-weight:900">' + (metaQ.indexOf(id) >= 0 || (metaRunning && metaPending(id)) ? '抓取中…' : '↻ 重抓標題') + '</button>' : '') + '</div>' +
     '<input class="input" id="orgTitle" value="' + esc(it.title) + '" placeholder="' + (it.title ? '' : '沒抓到標題，補一句之後才找得到') + '" maxlength="300">' +
     '<div class="small" style="margin-top:-6px;word-break:break-all">' + esc(platOf(it.url).name) + '　' + esc(it.url.length > 70 ? it.url.slice(0, 70) + '…' : it.url) + '</div>' +
     '<div class="lbl">收進哪些糧倉？可以多選</div>' +
@@ -1040,8 +1063,7 @@ function openOrganize(id, opts) {
     '<button type="button" class="btn leaf" style="min-height:52px;font-size:16px" data-sh="finish" id="orgFinish">完成</button>' +
     '<div class="btns" style="justify-content:space-between">' +
       '<button type="button" class="btn line" data-sh="close">' + (ORG.fromShare ? '先放收件匣' : '先不要') + '</button>' +
-      '<div class="btns">' + (S.sync.url && !it.title ? '<button type="button" class="btn line" data-sh="refetch">重抓標題</button>' : '') +
-      '<button type="button" class="btn danger" data-sh="del">刪除</button></div></div>',
+      '<button type="button" class="btn danger" data-sh="del">刪除</button></div>',
     {
       addTag: () => {
         const p = addTagPath($('#orgNew').value);
@@ -1079,7 +1101,14 @@ function openOrganize(id, opts) {
         render();
         toast('刪掉了', [{ label: '復原', fn: () => restore(before) }]);
       },
-      refetch: () => { delete S.metaTried[id]; save('tt_meta', S.metaTried); queueMeta(id); toast('重新抓標題中…'); closeSheet(); }
+      refetch: () => {
+        const btn = $('#orgRefetch');
+        if (!btn || btn.disabled) return;
+        if (!navigator.onLine) { toast('沒有網路，連上後再試'); return; }
+        delete S.metaTried[id]; delete metaFail[id]; save('tt_meta', S.metaTried);
+        btn.disabled = true; btn.textContent = '抓取中…';
+        queueMeta(id, true);
+      }
     });
   const kidAdd = l1 => {
     const v = ($('#orgKid') ? $('#orgKid').value : '').replace(/[\/／>＞]/g, '').trim();
@@ -1153,17 +1182,22 @@ function handleIncoming(params) {
   openShareCard(r.item.id);
 }
 function openShareCard(id) {
-  SHARE = { id: id, sel: [], left: 3, touched: false };
+  const it = byId(id);
+  // 標題還在抓：先等（最多 10 秒），抓完才開始 3 秒倒數
+  const waiting = !it.title && metaPending(id);
+  SHARE = { id: id, sel: [], left: 3, touched: false, waiting: waiting, waitLeft: 10 };
+  if (waiting) queueMeta(id, true);
   const chips = recentTags(3);
   const renderChips = () => {
+    if (!SHARE || !$('#shChips')) return;
     $('#shChips').innerHTML = chips.map(p => '<button type="button" class="chip' + (SHARE.sel.indexOf(p) >= 0 ? ' on' : '') + '" data-path="' + esc(p) + '">' + esc(p) + '</button>').join('') +
       '<button type="button" class="chip dash" data-sh="more">' + (chips.length ? '更多分類…' : '＋ 建立標籤') + '</button>';
     $('#shDone').textContent = SHARE.sel.length ? '完成，收進 ' + SHARE.sel.length + ' 個糧倉' : '完成，先放待整理';
-    $('#shHint').textContent = SHARE.touched ? '選好按完成' : SHARE.left + ' 秒後自動存好';
+    $('#shHint').textContent = SHARE.touched ? '選好按完成' : (SHARE.waiting ? '抓標題中…' : SHARE.left + ' 秒後自動存好');
   };
-  const it = byId(id);
+  SHARE.render = renderChips;
   sheet('<div style="display:flex;justify-content:space-between;align-items:center"><span style="font-size:18px;font-weight:900">囤好了！</span><span class="small" id="shHint"></span></div>' +
-    '<div style="font-size:14px;color:var(--muted);line-height:1.5" id="shTitle">' + esc(it.title || platOf(it.url).name + ' 的連結' + (S.sync.url ? '（標題抓取中）' : '')) + '</div>' +
+    '<div style="font-size:14px;color:var(--muted);line-height:1.5" id="shTitle">' + esc(it.title || platOf(it.url).name + ' 的連結' + (waiting ? '（抓標題中…）' : '')) + '</div>' +
     (it.title ? '' : '<input class="input" id="shName" maxlength="300" enterkeyhint="done" placeholder="這是什麼？（可略過）" aria-label="這是什麼？補一句之後才找得到">') +
     '<div class="lbl">順便分類？可以點好幾個</div>' +
     '<div style="display:flex;flex-wrap:wrap;gap:8px" id="shChips"></div>' +
@@ -1197,6 +1231,15 @@ function openShareCard(id) {
   SHARE.iv = setInterval(() => {
     if (!SHARE) return;
     if (SHARE.touched) return;
+    if (SHARE.waiting) {
+      if (--SHARE.waitLeft <= 0) {
+        SHARE.waiting = false;
+        const st = $('#shTitle');
+        if (st) st.textContent = platOf(it.url).name + ' 的連結（標題還在抓，存好後會自動補上）';
+      }
+      renderChips();
+      return;
+    }
     SHARE.left--;
     if (SHARE.left <= 0) shareDone(); else renderChips();
   }, 1000);
@@ -1347,16 +1390,30 @@ function askConfirm(title, body, okText, danger) {
       { ok: () => { res(true); closeSheet(); } }, () => res(false));
   });
 }
+let SORTK = '';   // 正在排序次分類的主分類名稱
 async function tagAction(act, i, j) {
   const tree = JSON.parse(JSON.stringify(tagsTree()));
   const t = tree[i];
+  if (act === 'sortk') { SORTK = t ? t.n : ''; renderSettings(); return; }
+  if (act === 'sortdone') { SORTK = ''; renderSettings(); toast('次分類排好了'); return; }
+  if (act === 'kup' || act === 'kdown') {
+    const k = act === 'kup' ? j - 1 : j + 1;
+    if (!t || k < 0 || k >= t.c.length) return;
+    [t.c[j], t.c[k]] = [t.c[k], t.c[j]];
+    setTags(tree);
+    renderSettings();
+    const b = $('.sk-list [data-tg="' + act + '"][data-j="' + k + '"]');
+    if (b && !b.disabled) b.focus();
+    return;
+  }
+  if (act !== 'sortk') SORTK = '';
   if (act === 'add') {
     const v = await askText('新增標籤', '', '例如：AI技巧');
     if (!v) return;
     if (tree.some(x => x.n === v)) { toast('已經有「' + v + '」了'); return; }
     tree.push({ n: v, c: [] }); setTags(tree);
   } else if (act === 'addk') {
-    const v = await askText('在「' + t.n + '」底下新增細分類', '', '例如：製圖');
+    const v = await askText('在「' + t.n + '」底下新增次分類', '', '例如：製圖');
     if (!v) return;
     if (t.c.indexOf(v) >= 0) { toast('已經有了'); return; }
     t.c.push(v); setTags(tree);
@@ -1381,7 +1438,7 @@ async function tagAction(act, i, j) {
     retag(tags => tags.map(p => p === o ? nw : p));
   } else if (act === 'del') {
     const n = countUsing(p => p === t.n || p.indexOf(t.n + SEP) === 0);
-    const ok = await askConfirm('刪除「' + t.n + '」？', n ? '有 ' + n + ' 則收藏用到它（含細分類），會一起拿掉這個標籤；沒有其他標籤的會回到「待整理」。' : '目前沒有收藏用到它。', '刪除', true);
+    const ok = await askConfirm('刪除「' + t.n + '」？', n ? '有 ' + n + ' 則收藏用到它（含次分類），會一起拿掉這個標籤；沒有其他標籤的會回到「待整理」。' : '目前沒有收藏用到它。', '刪除', true);
     if (!ok) return;
     const old = t.n; tree.splice(i, 1); setTags(tree);
     retag(tags => tags.filter(p => p !== old && p.indexOf(old + SEP) !== 0));
@@ -1560,15 +1617,20 @@ function renderSync() {
 }
 
 /* ---------- 抓標題 ---------- */
+// metaTried：後端真的回應過（不論有沒有標題）才記下，之後不再自動抓
+// metaFail：這次打開 App 期間連線失敗的，先不重試；下次打開 App 會再試
 let metaQ = [], metaRunning = false;
-function queueMeta(id) {
-  if (S.metaTried[id] || metaQ.indexOf(id) >= 0) return;
-  metaQ.push(id);
-  setTimeout(runMetaQueue, 300);
+const metaFail = {};
+function queueMeta(id, first) {
+  if (S.metaTried[id]) return;
+  metaQ = metaQ.filter(x => x !== id);
+  if (first) metaQ.unshift(id); else metaQ.push(id);
+  setTimeout(runMetaQueue, first ? 0 : 300);
 }
+const metaPending = id => !!(S.sync.url && navigator.onLine && !S.metaTried[id] && !metaFail[id]);
 async function runMetaQueue() {
   if (metaRunning || !S.sync.url || !navigator.onLine) return;
-  live().forEach(it => { if (!it.title && !S.metaTried[it.id] && metaQ.indexOf(it.id) < 0) metaQ.push(it.id); });
+  live().forEach(it => { if (!it.title && !S.metaTried[it.id] && !metaFail[it.id] && metaQ.indexOf(it.id) < 0) metaQ.push(it.id); });
   if (!metaQ.length) return;
   metaRunning = true;
   try {
@@ -1576,30 +1638,89 @@ async function runMetaQueue() {
       const id = metaQ.shift();
       const it = byId(id);
       if (!it || it.deleted) continue;
-      S.metaTried[id] = 1;
-      save('tt_meta', S.metaTried);
+      let got = false;
       try {
         const j = await api('meta', { url: it.url });
+        S.metaTried[id] = 1;
+        save('tt_meta', S.metaTried);
         const m = j.meta || {};
         const cur = byId(id);
         const patch = {};
         if (m.title && !GENERIC_TITLE.test(m.title) && !cur.title) patch.title = m.title;
         if (m.thumb && !cur.thumb) patch.thumb = m.thumb;
+        got = !!patch.title;
         if (Object.keys(patch).length) {
           patchItem(id, patch, true);
-          const st = $('#shTitle');
-          if (st && SHARE && SHARE.id === id && patch.title) {
-            st.textContent = patch.title;
-            const nm = $('#shName');
-            if (nm && !nm.value.trim() && document.activeElement !== nm) nm.remove();
-          }
           if (!SHEET) render();
         }
-      } catch (e) { /* 抓不到就算了，之後可手動補 */ }
-      await new Promise(r => setTimeout(r, 900));
+      } catch (e) { metaFail[id] = 1; /* 連線失敗：下次打開 App 再試 */ }
+      metaDone(id, got);
+      if (metaQ.length) await new Promise(r => setTimeout(r, 900));
     }
   } finally { metaRunning = false; }
 }
+/** 一則抓完（成功或失敗）時，更新開著的分享卡或整理面板 */
+function metaDone(id, got) {
+  const it = byId(id);
+  if (SHARE && SHARE.id === id) {
+    SHARE.waiting = false;
+    const st = $('#shTitle'), nm = $('#shName');
+    if (got && it) {
+      if (st) st.textContent = it.title;
+      if (nm && !nm.value.trim() && document.activeElement !== nm) nm.remove();
+    } else if (st) st.textContent = platOf(it ? it.url : '').name + ' 的連結（沒抓到標題，可以在下面補一句）';
+    if (SHARE.render) SHARE.render();
+  }
+  if (ORG && ORG.id === id && $('#orgTitle')) {
+    const box = $('#orgTitle'), btn = $('#orgRefetch');
+    if (got && it && !box.value.trim()) box.value = it.title;
+    if (btn) {
+      if (got) btn.remove();
+      else { btn.disabled = false; btn.textContent = '沒抓到，再試一次'; }
+    }
+  }
+}
+
+/* ---------- 次分類拖曳排序（只有按住 ⠿ 才拖，其他地方照常捲動） ---------- */
+let KD = null;
+function kidDragEnd(e) {
+  if (!KD || e.pointerId !== KD.pid) return;
+  const d = KD; KD = null;
+  d.row.classList.remove('dragging');
+  const order = $$('.sk-row', d.list).map(r => r.dataset.c);
+  const tree = JSON.parse(JSON.stringify(tagsTree()));
+  const t = tree[Number(d.list.dataset.i)];
+  if (t && JSON.stringify(order) !== JSON.stringify(t.c) && order.length === t.c.length) {
+    t.c = order;
+    setTags(tree);
+    try { if (navigator.vibrate) navigator.vibrate(15); } catch (err) { /* 略過 */ }
+  }
+  renderSettings();
+}
+$('#setPanel').addEventListener('pointerdown', e => {
+  const g = e.target.closest('.sk-grip');
+  if (!g) return;
+  e.preventDefault();
+  const row = g.closest('.sk-row');
+  KD = { row: row, list: row.parentElement, pid: e.pointerId };
+  try { g.setPointerCapture(e.pointerId); } catch (err) { /* 略過 */ }
+  row.classList.add('dragging');
+});
+$('#setPanel').addEventListener('pointermove', e => {
+  if (!KD || e.pointerId !== KD.pid) return;
+  const rows = $$('.sk-row', KD.list), idx = rows.indexOf(KD.row);
+  let to = idx;
+  rows.forEach((r, k) => {
+    if (k === idx) return;
+    const rc = r.getBoundingClientRect(), mid = rc.top + rc.height / 2;
+    if (k < idx && e.clientY < mid) to = Math.min(to, k);
+    if (k > idx && e.clientY > mid) to = Math.max(to, k);
+  });
+  if (to < idx) KD.list.insertBefore(KD.row, rows[to]);
+  else if (to > idx) rows[to].after(KD.row);
+});
+$('#setPanel').addEventListener('pointerup', kidDragEnd);
+$('#setPanel').addEventListener('pointercancel', kidDragEnd);
 
 /* ================= 全域事件 ================= */
 $$('.tabbar button').forEach(b => b.addEventListener('click', () => go(b.dataset.go)));
