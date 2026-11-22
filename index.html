@@ -1,9 +1,13 @@
 <!doctype html>
 <!--
   囤囤の森 — 隨手收藏網路上的影片、文章、貼文
-  版本：v1.5.0（2026-11-23）
+  版本：v1.6.0（2026-11-23）
 
   更新紀錄（最近三版，完整紀錄見規格檔）
+  v1.6.0（2026-11-23）
+    【新增】嗑一顆多一顆「挑有寫心得的」開關
+    【調整】「放最久的優先」改成全部都抽得到、放越久越容易抽中（原本只在最舊的 3 則裡挑）
+    【調整】分類選單每列可選 1～4 個主分類，預設 3 個；雲端同步清空網址時，通行碼也一起從這台裝置清掉
   v1.5.0（2026-11-23）
     【新增】糧倉多一顆「有心得」篩選（可和全部／還沒看／看過一起用）；嗑一顆顯示完整心得，可直接寫或改心得
     【新增】設定可選分類選單每列放 1～3 個主分類（預設 2 個），四個選分類的地方都套用
@@ -12,10 +16,6 @@
     【新增】糧倉可一次選很多則：移到分類、加上分類、標成看過、刪除；設定頁分類可搬到別的主分類底下、升成主分類、合併
     【新增】主分類可拖曳排序（設定頁、整理面板都能進）；整理面板可搜尋分類，主分類會收合
     【調整】分享卡不再倒數；整理面板上下固定、中間捲動；心得框變大、沒看過也能寫，糧倉點心得看全文
-  v1.3.0（2026-11-04）
-    【新增】設定頁次分類可以排序：點「⇅ 排序」後按住 ⠿ 拖曳或按 ↑↓
-    【調整】分享進來時，標題還在抓就先等（最多 10 秒）再倒數；連線失敗的下次打開 App 自動重抓
-    【調整】「重抓標題」移到標題欄旁邊，按了不用關面板，抓到直接填入
 -->
 <html lang="zh-Hant">
 <head>
@@ -23,7 +23,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, interactive-widget=resizes-content">
 <meta name="theme-color" content="#23314F">
 <meta name="description" content="隨手收藏網路上的影片、文章、貼文">
-<title>囤囤の森 v1.5.0</title>
+<title>囤囤の森 v1.6.0</title>
 <link rel="manifest" href="manifest.webmanifest">
 <link rel="icon" href="icon-192.png">
 <link rel="apple-touch-icon" href="icon-192.png">
@@ -326,7 +326,12 @@ body:has(#granQ:focus) .tabbar{visibility:hidden}
 .pk-n{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .pk-grid .pk-kids{grid-column:1/-1;margin-top:-4px}
 .cols-seg{display:inline-flex}
-.cols-seg button{min-height:40px;padding:0 16px;font-size:14px}
+.cols-seg button{min-height:40px;padding:0 14px;font-size:14px}
+.tp-grid[style*="--cols:4"] .tp-name{padding:4px 2px 4px 10px;font-size:13px;line-height:1.25;white-space:normal;word-break:break-all;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical}
+.tp-grid[style*="--cols:4"] .tp-exp{padding:0 4px;min-width:24px;font-size:11px}
+.tp-grid[style*="--cols:4"] .tp-exp .cnt{display:none}
+.pk-grid[style*="--cols:4"] .pk-row{padding:0 8px;font-size:13px}
+.pk-grid[style*="--cols:4"] .pk-row small{font-size:12px}
 .org-link{color:var(--leaf);font-weight:500;text-decoration:underline;text-underline-offset:2px}
 .snack-card{touch-action:pan-y;user-select:none;-webkit-user-select:none}
 .snack-card.drag{transition:none}
@@ -411,6 +416,7 @@ body:has(#granQ:focus) .tabbar{visibility:hidden}
     <div style="display:flex;gap:8px;padding:10px 20px 0;flex-wrap:wrap">
       <button class="toggle-chip" type="button" id="snackTodo" aria-pressed="true"></button>
       <button class="toggle-chip" type="button" id="snackOld" aria-pressed="false"></button>
+      <button class="toggle-chip" type="button" id="snackHasNote" aria-pressed="false"></button>
     </div>
     <div class="snack" id="snackBox"></div>
   </section>
@@ -436,8 +442,13 @@ body:has(#granQ:focus) .tabbar{visibility:hidden}
 
 <script>
 'use strict';
-const APP_VERSION = '1.5.0';
+const APP_VERSION = '1.6.0';
 const CHANGELOG = [
+  { v: '1.6.0', d: '2026-11-23', lines: [
+    '【新增】嗑一顆多一顆「挑有寫心得的」開關',
+    '【調整】「放最久的優先」改成全部都抽得到、放越久越容易抽中（原本只在最舊的 3 則裡挑）',
+    '【調整】分類選單每列可選 1～4 個主分類，預設 3 個；雲端同步清空網址時，通行碼也一起從這台裝置清掉'
+  ] },
   { v: '1.5.0', d: '2026-11-23', lines: [
     '【新增】糧倉多一顆「有心得」篩選（可和全部／還沒看／看過一起用）；嗑一顆顯示完整心得，可直接寫或改心得',
     '【新增】設定可選分類選單每列放 1～3 個主分類（預設 2 個），四個選分類的地方都套用',
@@ -556,19 +567,21 @@ const DEFAULT_TAGS = [
 const S = {
   items: load('tt_items', []),
   shared: load('tt_shared', { tags: { value: DEFAULT_TAGS, updatedAt: 0 } }),
-  pref: Object.assign({ home: 'inbox', noteMode: 'toast', shareMode: 'quick', theme: 'system', cols: '2' }, load('tt_pref', {})),
+  pref: Object.assign({ home: 'inbox', noteMode: 'toast', shareMode: 'quick', theme: 'system' }, load('tt_pref', {})),
   sync: Object.assign({ url: '', key: '', since: 0, dirty: [], dirtySet: [], lastOk: 0, lastErr: '' }, load('tt_sync', {})),
   recent: load('tt_recent', []),
   metaTried: load('tt_meta', {}),
   screen: 'inbox',
   gran: { l1: '', l2: '', status: 'all', note: false, q: '', sort: 'new', limit: 60 },
-  snack: { l1: '', todo: true, old: false, cur: '', spin: 0 },
+  snack: { l1: '', todo: true, old: false, note: false, cur: '', spin: 0 },
   undo: null,
   pick: false,          // 糧倉選取模式
   picked: new Set()     // 選起來的收藏 id
 };
 const NOTE_OPEN = new Set();   // 糧倉裡展開全文的心得
 // 這台裝置的新手狀態：done＝清單收起、install＝已安裝（手動確認）、demo＝示範過滑動
+// v1.6.0：每列主分類改成 1～4 個、預設 3 個。v1.5.0 存下的 '2' 是當時的預設（分不出是不是自己選的），一律換成 3；選過 1 或 3 的保留
+if (!S.pref.colsV6) { if (!S.pref.cols || S.pref.cols === '2') S.pref.cols = '3'; S.pref.colsV6 = 1; save('tt_pref', S.pref); }
 const ONB = Object.assign({ done: false, install: false, demo: false }, load('tt_onb', {}));
 function saveOnb() { save('tt_onb', ONB); }
 const tagsTree = () => (S.shared.tags && Array.isArray(S.shared.tags.value)) ? S.shared.tags.value : [];
@@ -1028,17 +1041,20 @@ function openL1Picker(forWhat) {
 /* ---------- 嗑一顆 ---------- */
 function snackPool() {
   const s = S.snack;
-  let L = live().filter(it => (!s.todo || !it.seen) && (!s.l1 || inL1(it, s.l1)));
-  if (s.old) L = L.slice().sort((a, b) => a.savedAt - b.savedAt).slice(0, 3);
-  return L;
+  return live().filter(it => (!s.todo || !it.seen) && (!s.note || String(it.note || '').trim()) && (!s.l1 || inL1(it, s.l1)));
 }
+// 「放最久的優先」：每一則都抽得到，但抽中機會和放了幾天成正比（放 60 天的大約是放 10 天的 6 倍）
+const snackWeight = it => S.snack.old ? daysAgo(it.savedAt) + 1 : 1;
 function snackPick(force) {
   const L = snackPool();
   if (!L.length) { S.snack.cur = ''; return; }
   if (!force && L.some(x => x.id === S.snack.cur)) return;
   const others = L.filter(x => x.id !== S.snack.cur);
   const from = others.length ? others : L;
-  S.snack.cur = from[Math.floor(Math.random() * from.length)].id;
+  const total = from.reduce((n, it) => n + snackWeight(it), 0);
+  let r = Math.random() * total, pick = from[from.length - 1];
+  for (const it of from) { r -= snackWeight(it); if (r < 0) { pick = it; break; } }
+  S.snack.cur = pick.id;
   S.snack.spin++;
 }
 function renderSnack() {
@@ -1050,12 +1066,16 @@ function renderSnack() {
   const td = $('#snackTodo'), od = $('#snackOld');
   td.textContent = (s.todo ? '✓ ' : '') + '只挑還沒看的'; td.classList.toggle('on', s.todo); td.setAttribute('aria-pressed', s.todo);
   od.textContent = (s.old ? '✓ ' : '') + '放最久的優先'; od.classList.toggle('on', s.old); od.setAttribute('aria-pressed', s.old);
+  const hn = $('#snackHasNote');
+  hn.textContent = (s.note ? '✓ ' : '') + '挑有寫心得的'; hn.classList.toggle('on', s.note); hn.setAttribute('aria-pressed', s.note);
   snackPick(false);
   const it = byId(s.cur);
   const L = snackPool();
   if (!it) {
     $('#snackBox').innerHTML = '<div class="empty-box" style="color:var(--top-muted)">' + (live().length
-      ? '這個糧倉都吃完了。<br>換一個糧倉，或關掉「只挑還沒看的」。'
+      ? (s.note && s.todo ? '還沒看又有心得的找不到。<br>關掉「只挑還沒看的」試試，心得通常是看過才寫的。'
+        : s.note ? '這裡還沒有寫過心得的。<br>換一個糧倉，或關掉「挑有寫心得的」。'
+        : '這個糧倉都吃完了。<br>換一個糧倉，或關掉「只挑還沒看的」。')
       : '糧倉還是空的，先去存幾顆吧。') + '</div>';
     return;
   }
@@ -1187,8 +1207,9 @@ function renderSettings() {
       optHtml('shareMode', 'full', '直接打開完整分類', '每次都選好再存') + '</div>' +
     '<div class="card"><h2>分類選單每列幾個主分類</h2>' +
       '<p>整理面板、批次移動、糧倉和嗑一顆的「分類 ▾」都會照這個排。主分類名字長就選少一點。</p>' +
-      '<div class="seg cols-seg" role="group" aria-label="每列幾個主分類">' + ['1', '2', '3'].map(v =>
-        '<button type="button" class="' + (S.pref.cols === v ? 'on' : '') + '" data-pref="cols" data-val="' + v + '" aria-pressed="' + (S.pref.cols === v) + '">' + v + ' 個' + (v === '2' ? '（預設）' : '') + '</button>').join('') + '</div></div>' +
+      '<div class="seg cols-seg" role="group" aria-label="每列幾個主分類">' + ['1', '2', '3', '4'].map(v =>
+        '<button type="button" class="' + (colsN() === v ? 'on' : '') + '" data-pref="cols" data-val="' + v + '" aria-pressed="' + (colsN() === v) + '">' + v + ' 個</button>').join('') + '</div>' +
+      '<p class="small" style="margin:8px 0 0">預設 3 個</p></div>' +
     '<div class="card"><h2>外觀</h2>' + optHtml('theme', 'system', '跟隨系統', '手機深色模式時自動變深色') + optHtml('theme', 'light', '淺色', '') + optHtml('theme', 'dark', '深色', '') + '</div>' +
 
     '<div class="card"><h2>在電腦上收藏</h2><p>把下面的黃色按鈕拖到瀏覽器的書籤列。看到想存的網頁時按一下，就會跳出小視窗存好，存完自動關掉。</p>' +
@@ -1386,7 +1407,7 @@ function openNote(id) {
 // 主分類平常收合成一顆，點 ▾ 才展開次分類；上方可以搜尋；最近用過的排第一排
 let PICK = null;
 const tagHit = (name, q) => name.toLowerCase().indexOf(q) >= 0;
-const colsN = () => (['1', '2', '3'].indexOf(String(S.pref.cols)) >= 0 ? S.pref.cols : '2');
+const colsN = () => (['1', '2', '3', '4'].indexOf(String(S.pref.cols)) >= 0 ? S.pref.cols : '3');
 function chipBtn(path, label, sel, size, hit) {
   const on = sel.indexOf(path) >= 0;
   return '<button type="button" class="chip ' + size + (on ? ' on' : (hit ? ' tp-hit' : '')) + '" data-path="' + esc(path) + '" aria-pressed="' + on + '">' + esc(label) + '</button>';
@@ -1493,7 +1514,7 @@ function pickerRender(P) {
     if (!open) {
       groups.push('<span class="tp-g' + (on ? ' on' : (part ? ' part' : '')) + '">' +
         '<button type="button" class="tp-name" data-path="' + esc(t.n) + '" aria-pressed="' + on + '" title="' + esc(t.n) + '">' + esc(t.n) + '</button>' +
-        '<button type="button" class="tp-exp" data-exp="' + esc(t.n) + '" aria-expanded="false" aria-label="展開「' + esc(t.n) + '」的次分類">' + (t.c.length ? t.c.length + ' ▾' : '▾') + '</button></span>');
+        '<button type="button" class="tp-exp" data-exp="' + esc(t.n) + '" aria-expanded="false" aria-label="展開「' + esc(t.n) + '」的次分類">' + (t.c.length ? '<span class="cnt">' + t.c.length + ' </span>▾' : '▾') + '</button></span>');
       return;
     }
     let add = '';
@@ -2374,6 +2395,7 @@ $('#syncBtn').addEventListener('click', () => go('settings'));
 $('#granQ').addEventListener('input', e => { S.gran.q = e.target.value; S.gran.limit = 60; renderGranary(); });
 $('#snackTodo').addEventListener('click', () => { S.snack.todo = !S.snack.todo; S.snack.cur = ''; renderSnack(); });
 $('#snackOld').addEventListener('click', () => { S.snack.old = !S.snack.old; S.snack.cur = ''; renderSnack(); });
+$('#snackHasNote').addEventListener('click', () => { S.snack.note = !S.snack.note; S.snack.cur = ''; renderSnack(); });
 
 document.addEventListener('click', async e => {
   const t = e.target;
@@ -2439,7 +2461,8 @@ document.addEventListener('click', async e => {
   else if (act === 'changelog') openChangelog();
   else if (act === 'saveConn') {
     S.sync.url = $('#setUrl').value.trim();
-    S.sync.key = $('#setKey').value.trim();
+    // 清空網址＝改回只存本機，通行碼也一起從這台裝置清掉
+    S.sync.key = S.sync.url ? $('#setKey').value.trim() : '';
     S.sync.lastErr = '';
     if (S.sync.url && !/^https:\/\/script\.google\.com\/macros\/s\/[\w-]+\/exec$/.test(S.sync.url)) {
       toast('網址看起來不對，應該是 https://script.google.com/macros/s/…/exec');
@@ -2447,7 +2470,7 @@ document.addEventListener('click', async e => {
     S.sync.since = 0;
     S.sync.dirty = [...new Set(S.sync.dirty.concat(live().map(x => x.id)))];
     persistSync();
-    if (!S.sync.url) { renderSettings(); renderSync(); toast('已改回只存本機'); return; }
+    if (!S.sync.url) { renderSettings(); renderSync(); toast('已改回只存本機，通行碼也從這台裝置清掉了'); return; }
     $('#connMsg').textContent = '測試中…';
     try {
       const j = await api('ping');
