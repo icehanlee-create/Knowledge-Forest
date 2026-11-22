@@ -1,9 +1,13 @@
 <!doctype html>
 <!--
   囤囤の森 — 隨手收藏網路上的影片、文章、貼文
-  版本：v1.3.0（2026-11-04）
+  版本：v1.4.0（2026-11-22）
 
   更新紀錄（最近三版，完整紀錄見規格檔）
+  v1.4.0（2026-11-22）
+    【新增】糧倉可一次選很多則：移到分類、加上分類、標成看過、刪除；設定頁分類可搬到別的主分類底下、升成主分類、合併
+    【新增】主分類可拖曳排序（設定頁、整理面板都能進）；整理面板可搜尋分類，主分類會收合
+    【調整】分享卡不再倒數；整理面板上下固定、中間捲動；心得框變大、沒看過也能寫，糧倉點心得看全文
   v1.3.0（2026-11-04）
     【新增】設定頁次分類可以排序：點「⇅ 排序」後按住 ⠿ 拖曳或按 ↑↓
     【調整】分享進來時，標題還在抓就先等（最多 10 秒）再倒數；連線失敗的下次打開 App 自動重抓
@@ -11,18 +15,14 @@
   v1.2.0（2026-11-01）
     【新增】整理面板每個主分類後面多一顆「＋」，點了直接打次分類名稱，不用再打主分類
     【調整】下方輸入框改成「＋ 新增主分類」，點了才出現
-  v1.1.0（2026-10-31）
-    【新增】長按一則就能分類；分享卡沒有標題時可以順手補一句；每週提醒放超過一個月還沒看的
-    【新增】第一次使用的 3 步清單、待整理示範左右滑；電腦「囤一下」小視窗存好自動關
-    【調整】底部導覽文字放大
 -->
 <html lang="zh-Hant">
 <head>
 <meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, interactive-widget=resizes-content">
 <meta name="theme-color" content="#23314F">
 <meta name="description" content="隨手收藏網路上的影片、文章、貼文">
-<title>囤囤の森 v1.3.0</title>
+<title>囤囤の森 v1.4.0</title>
 <link rel="manifest" href="manifest.webmanifest">
 <link rel="icon" href="icon-192.png">
 <link rel="apple-touch-icon" href="icon-192.png">
@@ -236,6 +236,82 @@ textarea.input{padding:10px 12px;min-height:90px;resize:vertical;line-height:1.5
 .nudge-t{flex:1;font-size:13px;line-height:1.4}
 .nudge .pill-btn{min-height:40px;font-size:13px;padding:0 12px;flex:none}
 .nudge-x{flex:none;width:40px;height:40px;border:none;border-radius:20px;background:transparent;color:var(--top-muted);font-size:16px}
+/* v1.4.0：整理面板（上下固定、中間捲動） */
+.sheet{overscroll-behavior:contain}
+.sheet.org{height:min(90dvh,820px);max-height:none;padding:0;gap:0;overflow:hidden}
+.org-head{flex:none;padding:16px 16px 10px;border-bottom:2px solid var(--line);display:flex;flex-direction:column;gap:6px}
+.org-title-row{display:flex;gap:6px;align-items:center}
+.org-title-row .input{flex:1;font-weight:500}
+.org-meta{display:flex;align-items:center;gap:8px;font-size:12px;color:var(--muted);min-height:28px}
+.org-meta .u{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.org-body{flex:1 1 auto;min-height:0;overflow-y:auto;padding:12px 16px 16px;display:flex;flex-direction:column;gap:10px;overscroll-behavior:contain}
+.org-foot{flex:none;padding:10px 16px calc(14px + env(safe-area-inset-bottom));border-top:2px solid var(--line);background:var(--panel);display:flex;flex-direction:column;gap:8px}
+.sel-strip{display:flex;gap:6px;overflow-x:auto;scrollbar-width:none;min-height:34px;align-items:center}
+.sel-strip::-webkit-scrollbar{display:none}
+.sel-pill{flex:none;display:inline-flex;align-items:center;gap:2px;min-height:32px;padding:0 4px 0 12px;border-radius:16px;background:var(--ink);color:var(--panel);font-size:13px;font-weight:500;border:none}
+.sel-pill i{font-style:normal;width:24px;text-align:center;opacity:.7}
+.sel-none{font-size:13px;color:var(--muted)}
+.foot-row{display:flex;gap:8px}
+.foot-row > *{flex:1}
+.tgl{min-height:44px;padding:0 12px;border-radius:22px;border:2px solid var(--line2);background:var(--card);color:var(--ink);font-size:14px;display:inline-flex;align-items:center;justify-content:center;gap:6px;min-width:0}
+.tgl[aria-pressed="true"]{background:var(--grain);border-color:var(--grain);color:#23314F;font-weight:900}
+.tgl .pv{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;min-width:0}
+.tgl.has{border-color:var(--leaf);color:var(--ink)}
+textarea.org-note{flex:1;min-height:180px;resize:none;font-size:16px;line-height:1.7}
+input[type=search]::-webkit-search-cancel-button{-webkit-appearance:none;display:none}
+.note-count{font-size:12px;color:var(--muted);align-self:center;flex:none !important}
+/* 分類挑選器 */
+.tp-top{display:flex;gap:8px;align-items:center}
+.tp-search{flex:1;position:relative}
+.tp-search input{width:100%;min-height:42px;border:2px solid var(--line2);border-radius:21px;padding:0 36px 0 14px;font-size:15px;background:var(--card);color:var(--ink)}
+.tp-search button{position:absolute;right:4px;top:4px;width:34px;height:34px;border:none;border-radius:17px;background:transparent;color:var(--muted)}
+.tp-sec{display:flex;flex-direction:column;gap:6px}
+.tp-wrap{display:flex;flex-wrap:wrap;gap:8px;align-items:flex-start}
+.tp-g{display:inline-flex;align-items:stretch;border:2px solid var(--line2);border-radius:22px;background:var(--card);overflow:hidden;min-height:44px}
+.tp-g.part{border-color:var(--ink)}
+.tp-g.on{border-color:var(--ink);background:var(--ink)}
+.tp-name{border:none;background:transparent;color:var(--ink);font-weight:900;font-size:15px;padding:0 6px 0 14px}
+.tp-g.on .tp-name{color:var(--panel)}
+.tp-exp{border:none;border-left:2px solid var(--line);background:transparent;color:var(--muted);font-size:12px;padding:0 10px 0 8px;font-family:var(--num);font-weight:600;min-width:36px}
+.tp-g.on .tp-exp{color:var(--panel);border-left-color:rgba(255,255,255,.2)}
+.tp-open{flex-basis:100%;display:flex;flex-wrap:wrap;gap:6px;align-items:center;padding:8px;border:2px solid var(--line);border-radius:20px;background:var(--card)}
+.tp-open .chip{background:var(--panel)}
+.tp-open .chip.on{background:var(--ink)}
+.tp-fold{min-height:36px;padding:0 10px;border:none;background:transparent;color:var(--muted);font-size:13px;margin-left:auto}
+.tp-hit{background:var(--grain3) !important;color:#23314F !important;border-color:var(--grain2) !important}
+/* 糧倉：選取模式 */
+.row.picking .row-fg{padding-left:48px}
+.pick{display:none;position:absolute;left:12px;top:50%;margin-top:-13px;width:26px;height:26px;border-radius:50%;border:2px solid var(--line2);background:var(--panel);align-items:center;justify-content:center;color:#fff}
+.row.picking .pick{display:flex}
+.row.picked .row-fg{border-color:var(--leaf);background:color-mix(in srgb,var(--leaf) 10%,var(--card))}
+.row.picked .pick{background:var(--leaf);border-color:var(--leaf)}
+.row.picking .more{display:none}
+.sel-bar{position:sticky;top:0;z-index:5;display:flex;align-items:center;gap:8px;padding:8px 16px;margin:0 0 8px;background:var(--panel);border-bottom:2px solid var(--line)}
+.sel-bar .n{flex:1;font-size:14px}
+.sel-bar .n b{font-family:var(--num);font-size:20px;color:var(--leaf);font-weight:800}
+.sel-acts{position:fixed;left:50%;transform:translateX(-50%);bottom:calc(10px + env(safe-area-inset-bottom));width:min(496px,calc(100% - 24px));min-height:60px;background:var(--night);border-radius:30px;display:grid;grid-template-columns:repeat(4,1fr);z-index:21;box-shadow:0 0 0 2px var(--leaf);padding:4px}
+.sel-acts button{border:none;background:transparent;color:#FAF8F2;font-size:14px;font-weight:900;border-radius:26px}
+.sel-acts button:disabled{opacity:.35}
+.sel-acts button.del{color:#F08A8F}
+body.selmode .tabbar{display:none}
+body:has(#granQ:focus) .tabbar{visibility:hidden}
+/* 心得全文 */
+.note-line{white-space:pre-wrap;word-break:break-word}
+.note-line.open{display:block;-webkit-line-clamp:unset;overflow:visible}
+.note-more{font-size:12px;color:var(--leaf);font-weight:900;align-self:flex-start}
+/* 糧倉／分類選單 */
+.pk-list{display:flex;flex-direction:column;gap:6px}
+.pk-row{display:flex;align-items:center;justify-content:space-between;min-height:48px;padding:0 16px;border-radius:16px;border:2px solid var(--line2);background:var(--card);color:var(--ink);font-size:15px;font-weight:900;text-align:left;width:100%}
+.pk-row.on{border-color:var(--ink);background:var(--ink);color:var(--panel)}
+.pk-row small{font-family:var(--num);font-size:14px;font-weight:600;opacity:.75}
+.pk-kids{display:flex;flex-wrap:wrap;gap:6px;padding:0 4px 6px}
+/* 設定：分類動作 */
+.tt-kid{border:none;color:var(--ink);padding:0 12px;cursor:pointer}
+.tt-head .nm{flex:1;font-size:15px;font-weight:900;border:none;background:transparent;color:var(--ink);text-align:left;min-height:36px;padding:0}
+.act-list{display:flex;flex-direction:column;gap:8px}
+.act-list .btn{width:100%;justify-content:flex-start;text-align:left}
+.split{display:flex;flex-direction:column;gap:8px}
+.split .opt{margin:0}
 @media (prefers-reduced-motion:reduce){*{animation:none !important;transition:none !important}}
 </style>
 </head>
@@ -290,9 +366,13 @@ textarea.input{padding:10px 12px;min-height:90px;resize:vertical;line-height:1.5
       <div class="sub-row" id="granL2"></div>
       <div class="bar">
         <div class="seg" id="granStatus"></div>
-        <button class="link-btn" type="button" id="granSort"></button>
+        <div style="display:flex;gap:2px">
+          <button class="link-btn" type="button" id="granSort"></button>
+          <button class="link-btn" type="button" data-act="pickOn" id="granPick" style="color:var(--leaf);font-weight:900">選取</button>
+        </div>
       </div>
-      <div class="hint" style="padding-top:0">點一下打開　長按或右滑編輯　左滑切換看過</div>
+      <div class="hint" style="padding-top:0" id="granHint">點一下打開　長按或右滑編輯　左滑切換看過</div>
+      <div id="granSel"></div>
       <div id="granList"></div>
     </div>
   </section>
@@ -327,12 +407,18 @@ textarea.input{padding:10px 12px;min-height:90px;resize:vertical;line-height:1.5
 
 <div id="sheetRoot"></div>
 <div id="promptRoot"></div>
+<div id="selRoot"></div>
 <div id="toastRoot" role="status" aria-live="polite"></div>
 
 <script>
 'use strict';
-const APP_VERSION = '1.3.0';
+const APP_VERSION = '1.4.0';
 const CHANGELOG = [
+  { v: '1.4.0', d: '2026-11-22', lines: [
+    '【新增】糧倉可以一次選很多則：移到分類、加上分類、標成看過、刪除；設定頁的分類可以搬到別的主分類底下、升成主分類、合併',
+    '【新增】主分類可以拖曳排序（設定頁和整理面板都能進）；整理面板可以搜尋分類，主分類平常收合',
+    '【調整】分享卡不再倒數，選好按完成；整理面板上下固定、中間捲動；心得框變大、沒看過也能寫，糧倉點心得可看全文'
+  ] },
   { v: '1.3.0', d: '2026-11-04', lines: [
     '【新增】設定頁次分類可以排序：點「⇅ 排序」後按住 ⠿ 拖曳或按 ↑↓',
     '【調整】分享進來時，標題還在抓就先等（最多 10 秒）再倒數；連線失敗的下次打開 App 自動重抓',
@@ -383,7 +469,10 @@ const ICON = {
   check: '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" aria-hidden="true"><path d="M5 12l5 5 9-10"/></svg>',
   home: '<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" aria-hidden="true"><path d="M4 10l8-6 8 6v10H4z"/></svg>',
   eye: '<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" aria-hidden="true"><path d="M2 12s4-7 10-7 10 7 10 7-4 7-10 7S2 12 2 12z"/><circle cx="12" cy="12" r="3"/></svg>',
-  more: '<svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><circle cx="5" cy="12" r="2"/><circle cx="12" cy="12" r="2"/><circle cx="19" cy="12" r="2"/></svg>'
+  more: '<svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><circle cx="5" cy="12" r="2"/><circle cx="12" cy="12" r="2"/><circle cx="19" cy="12" r="2"/></svg>',
+  trash: '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" aria-hidden="true"><path d="M4 7h16M9 7V4h6v3M6 7l1 13h10l1-13"/></svg>',
+  eyeS: '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" aria-hidden="true"><path d="M2 12s4-7 10-7 10 7 10 7-4 7-10 7S2 12 2 12z"/><circle cx="12" cy="12" r="3"/></svg>',
+  tick: '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3.2" aria-hidden="true"><path d="M5 12l5 5 9-10"/></svg>'
 };
 
 /* ================= 網址 ================= */
@@ -445,8 +534,11 @@ const S = {
   screen: 'inbox',
   gran: { l1: '', l2: '', status: 'all', q: '', sort: 'new', limit: 60 },
   snack: { l1: '', todo: true, old: false, cur: '', spin: 0 },
-  undo: null
+  undo: null,
+  pick: false,          // 糧倉選取模式
+  picked: new Set()     // 選起來的收藏 id
 };
+const NOTE_OPEN = new Set();   // 糧倉裡展開全文的心得
 // 這台裝置的新手狀態：done＝清單收起、install＝已安裝（手動確認）、demo＝示範過滑動
 const ONB = Object.assign({ done: false, install: false, demo: false }, load('tt_onb', {}));
 function saveOnb() { save('tt_onb', ONB); }
@@ -521,6 +613,7 @@ function addLink(url, title) {
 
 /* ================= 畫面切換 ================= */
 function go(scr) {
+  if (scr !== 'granary' && S.pick) { S.pick = false; S.picked.clear(); document.body.classList.remove('selmode'); $('#selRoot').innerHTML = ''; }
   S.screen = scr;
   $$('.scr').forEach(el => el.classList.toggle('on', el.id === 'scr-' + scr));
   $$('.tabbar button').forEach(b => b.classList.toggle('on', b.dataset.go === scr));
@@ -548,13 +641,17 @@ function rowHtml(it, mode) {
   const p = platOf(it.url);
   const label = it.title || '（沒抓到標題，右滑補一句）';
   const tags = mode === 'gran' ? (it.tags || []).map(t => '<span class="tag">' + esc(t) + '</span>').join('') : '';
-  const note = mode === 'gran' && it.note ? '<div class="note-line">' + esc(it.note) + '</div>' : '';
+  const nOpen = NOTE_OPEN.has(it.id);
+  const note = mode === 'gran' && it.note ? '<div class="note-line' + (nOpen ? ' open' : '') + '">' + esc(it.note) + '</div><span class="note-more' + (nOpen ? '' : ' hide') + '">' + (nOpen ? '收起' : '展開全文') + '</span>' : '';
+  const pk = mode === 'gran' && S.pick;
+  const picked = pk && S.picked.has(it.id);
   const lText = mode === 'gran' && it.seen ? '改成還沒看' : '看過';
   const rText = mode === 'gran' ? '編輯' : '分類';
-  return '<div class="row' + (it.seen ? ' seen' : '') + '" data-id="' + esc(it.id) + '" data-mode="' + mode + '">' +
+  return '<div class="row' + (it.seen ? ' seen' : '') + (pk ? ' picking' : '') + (picked ? ' picked' : '') + '" data-id="' + esc(it.id) + '" data-mode="' + mode + '">' +
     '<div class="row-bg"><span class="bg-r">' + ICON.home + '<em style="font-style:normal" data-r="' + rText + '">' + rText + '</em></span>' +
     '<span class="bg-l"><em style="font-style:normal" data-l="' + lText + '">' + lText + '</em>' + ICON.eye + '</span></div>' +
-    '<div class="row-fg" data-id="' + esc(it.id) + '">' +
+    '<div class="row-fg" data-id="' + esc(it.id) + '"' + (pk ? ' role="checkbox" aria-checked="' + !!picked + '" tabindex="0"' : '') + '>' +
+      '<span class="pick" aria-hidden="true">' + (picked ? ICON.tick : '') + '</span>' +
       '<div class="thumb">' + (it.thumb ? '<img src="' + esc(it.thumb) + '" alt="" loading="lazy" referrerpolicy="no-referrer" onerror="this.remove()">' : '') + '<span class="src">' + esc(it.src || p.code) + '</span></div>' +
       '<div class="row-txt"><div class="row-title' + (it.title ? '' : ' empty') + '">' + esc(label) + '</div>' + note +
         '<div class="row-meta">' + tags + '<span>' + esc(p.name) + '　' + esc(fmtWhen(it.savedAt)) + '</span></div></div>' +
@@ -690,25 +787,9 @@ function nudgeHtml() {
 
 /* ---------- 糧倉 ---------- */
 function inL1(it, l1) { return (it.tags || []).some(t => t === l1 || t.indexOf(l1 + SEP) === 0); }
-function renderGranary() {
-  const g = S.gran, all = live(), T = tagsTree();
-  $('#granTop').innerHTML = nudgeHtml();
-  $('#granTotal').textContent = all.length;
-  if ($('#granQ').value !== g.q) $('#granQ').value = g.q;
-  $('#granL1').innerHTML = '<button type="button" class="chip-top' + (g.l1 ? '' : ' on') + '" data-gl1="">全部<small>' + all.length + '</small></button>' +
-    '<button type="button" class="chip-top' + (g.l1 === '__none' ? ' on' : '') + '" data-gl1="__none">未分類<small>' + inboxItems().length + '</small></button>' +
-    T.map(t => '<button type="button" class="chip-top' + (g.l1 === t.n ? ' on' : '') + '" data-gl1="' + esc(t.n) + '">' + esc(t.n) + '<small>' + all.filter(it => inL1(it, t.n)).length + '</small></button>').join('');
-  const l1obj = T.find(t => t.n === g.l1);
-  $('#granL2').innerHTML = l1obj && l1obj.c.length
-    ? '<button type="button" class="chip sm' + (g.l2 ? '' : ' on') + '" data-gl2="">全部' + esc(l1obj.n) + '</button>' +
-      l1obj.c.map(c => '<button type="button" class="chip sm' + (g.l2 === c ? ' on' : '') + '" data-gl2="' + esc(c) + '">' + esc(c) + '</button>').join('')
-    : '';
-  $('#granL2').classList.toggle('hide', !(l1obj && l1obj.c.length));
-  $('#granStatus').innerHTML = [['all', '全部'], ['todo', '還沒看'], ['seen', '看過']]
-    .map(o => '<button type="button" class="' + (g.status === o[0] ? 'on' : '') + '" data-gst="' + o[0] + '">' + o[1] + '</button>').join('');
-  $('#granSort').textContent = (g.sort === 'new' ? '新的在上' : '舊的在上') + ' ⇅';
-  const q = g.q.trim().toLowerCase();
-  let list = all.filter(it => {
+function granFiltered() {
+  const g = S.gran, q = g.q.trim().toLowerCase();
+  const list = live().filter(it => {
     if (g.l1 === '__none' && it.tags.length) return false;
     if (g.l1 && g.l1 !== '__none' && !inL1(it, g.l1)) return false;
     if (g.l2 && (it.tags || []).indexOf(g.l1 + SEP + g.l2) < 0) return false;
@@ -721,6 +802,42 @@ function renderGranary() {
     return true;
   });
   list.sort((a, b) => g.sort === 'new' ? b.savedAt - a.savedAt : a.savedAt - b.savedAt);
+  return list;
+}
+function renderGranary() {
+  const g = S.gran, all = live(), T = tagsTree();
+  $('#granTop').innerHTML = nudgeHtml();
+  $('#granTotal').textContent = all.length;
+  if ($('#granQ').value !== g.q) $('#granQ').value = g.q;
+  if (g.l1 && g.l1 !== '__none' && !T.some(t => t.n === g.l1)) { g.l1 = ''; g.l2 = ''; }
+  // 主分類多了橫排會很長：只留「全部」「未分類」「目前選的」，其他從「分類 ▾」挑
+  const cur = g.l1 && g.l1 !== '__none';
+  $('#granL1').innerHTML = '<button type="button" class="chip-top' + (g.l1 ? '' : ' on') + '" data-gl1="">全部<small>' + all.length + '</small></button>' +
+    '<button type="button" class="chip-top' + (g.l1 === '__none' ? ' on' : '') + '" data-gl1="__none">未分類<small>' + inboxItems().length + '</small></button>' +
+    (cur ? '<button type="button" class="chip-top on" data-gl1="" aria-label="取消篩選「' + esc(g.l1) + '」">' + esc(g.l1) + '<small>' + all.filter(it => inL1(it, g.l1)).length + '</small> ✕</button>' : '') +
+    '<button type="button" class="chip-top" data-act="pickL1" data-for="gran">' + (cur ? '換分類' : '分類') + ' ▾</button>';
+  const l1obj = T.find(t => t.n === g.l1);
+  if (l1obj && g.l2 && l1obj.c.indexOf(g.l2) < 0) g.l2 = '';
+  $('#granL2').innerHTML = l1obj && l1obj.c.length
+    ? '<button type="button" class="chip sm' + (g.l2 ? '' : ' on') + '" data-gl2="">全部' + esc(l1obj.n) + '</button>' +
+      l1obj.c.map(c => '<button type="button" class="chip sm' + (g.l2 === c ? ' on' : '') + '" data-gl2="' + esc(c) + '">' + esc(c) + '</button>').join('')
+    : '';
+  $('#granL2').classList.toggle('hide', !(l1obj && l1obj.c.length));
+  $('#granStatus').innerHTML = [['all', '全部'], ['todo', '還沒看'], ['seen', '看過']]
+    .map(o => '<button type="button" class="' + (g.status === o[0] ? 'on' : '') + '" data-gst="' + o[0] + '">' + o[1] + '</button>').join('');
+  $('#granSort').textContent = (g.sort === 'new' ? '新的在上' : '舊的在上') + ' ⇅';
+  const list = granFiltered();
+  // 選取模式：只留還在畫面篩選結果裡的
+  if (S.pick) { const ids = new Set(list.map(x => x.id)); [...S.picked].forEach(id => { if (!ids.has(id)) S.picked.delete(id); }); }
+  $('#granPick').classList.toggle('hide', S.pick || !all.length);
+  $('#granHint').textContent = S.pick ? '點一下選取，再點一次取消' : '點一下打開　長按或右滑編輯　左滑切換看過';
+  const allOn = list.length && list.every(x => S.picked.has(x.id));
+  $('#granSel').innerHTML = S.pick
+    ? '<div class="sel-bar"><span class="n">已選 <b>' + S.picked.size + '</b> 則</span>' +
+      (list.length ? '<button type="button" class="link-btn" style="color:var(--ink);font-weight:900" data-act="pickAll">' + (allOn ? '全部不選' : '全選這 ' + list.length + ' 則') + '</button>' : '') +
+      '<button type="button" class="btn line" style="min-height:38px;padding:0 14px" data-act="pickOff">結束選取</button></div>'
+    : '';
+  renderSelActs();
   if (!list.length) {
     $('#granList').innerHTML = '<div class="empty-box">' + (all.length ? '找不到符合的。<br>換個關鍵字，或把篩選改回「全部」。' : '糧倉還是空的。<br>先到「待整理」存幾則吧。') + '</div>';
     return;
@@ -728,6 +845,151 @@ function renderGranary() {
   const shown = list.slice(0, g.limit);
   $('#granList').innerHTML = shown.map(it => rowHtml(it, 'gran')).join('') +
     (list.length > shown.length ? '<button type="button" class="show-more" data-act="more">再顯示 60 顆（還有 ' + (list.length - shown.length) + ' 顆）</button>' : '');
+  markLongNotes();
+}
+/** 心得超過兩行的，下面出現「展開全文」 */
+function markLongNotes() {
+  requestAnimationFrame(() => {
+    $$('#granList .note-line:not(.open)').forEach(el => {
+      const more = el.nextElementSibling;
+      if (more && more.classList.contains('note-more')) more.classList.toggle('hide', el.scrollHeight <= el.clientHeight + 2);
+    });
+  });
+}
+function toggleNote(row) {
+  const id = row.dataset.id, el = $('.note-line', row), more = $('.note-more', row);
+  if (!el) return;
+  const open = !NOTE_OPEN.has(id);
+  if (open) NOTE_OPEN.add(id); else NOTE_OPEN.delete(id);
+  el.classList.toggle('open', open);
+  if (more) { more.textContent = open ? '收起' : '展開全文'; more.classList.toggle('hide', !open && el.scrollHeight <= el.clientHeight + 2); }
+  if (!open) markLongNotes();
+}
+
+/* ---------- 糧倉：批次選取 ---------- */
+function pickMode(on) {
+  S.pick = on;
+  S.picked.clear();
+  document.body.classList.toggle('selmode', on);
+  renderGranary();
+}
+function renderSelActs() {
+  const root = $('#selRoot');
+  if (!S.pick || S.screen !== 'granary') { root.innerHTML = ''; return; }
+  const n = S.picked.size, ids = [...S.picked];
+  const allSeen = n && ids.every(id => byId(id) && byId(id).seen);
+  const dis = n ? '' : ' disabled';
+  root.innerHTML = '<div class="sel-acts" role="toolbar" aria-label="批次操作">' +
+    '<button type="button" data-act="bMove"' + dis + '>移到分類</button>' +
+    '<button type="button" data-act="bAdd"' + dis + '>加上分類</button>' +
+    '<button type="button" data-act="bSeen"' + dis + '>' + (allSeen ? '改成沒看' : '標成看過') + '</button>' +
+    '<button type="button" class="del" data-act="bDel"' + dis + '>刪除</button></div>';
+}
+function togglePick(id, row) {
+  if (S.picked.has(id)) S.picked.delete(id); else S.picked.add(id);
+  const on = S.picked.has(id);
+  if (row) {
+    row.classList.toggle('picked', on);
+    const fg = $('.row-fg', row);
+    fg.setAttribute('aria-checked', on);
+    $('.pick', row).innerHTML = on ? ICON.tick : '';
+  }
+  const list = granFiltered();
+  const nEl = $('#granSel .n b'); if (nEl) nEl.textContent = S.picked.size;
+  const allBtn = $('#granSel [data-act="pickAll"]');
+  if (allBtn) allBtn.textContent = list.every(x => S.picked.has(x.id)) ? '全部不選' : '全選這 ' + list.length + ' 則';
+  renderSelActs();
+}
+/** 批次改很多則：記下改之前的樣子，提示可以復原 */
+function bulkPatch(ids, fn, msg) {
+  const befores = [];
+  BATCH = true;
+  try {
+    ids.forEach(id => {
+      const it = byId(id);
+      if (!it || it.deleted) return;
+      const patch = fn(it);
+      if (!patch) return;
+      befores.push(JSON.parse(JSON.stringify(it)));
+      putItem(Object.assign({}, it, patch), true);
+    });
+  } finally { BATCH = false; }
+  persistItems(); persistSync();
+  pickMode(false);
+  render();
+  toast(msg.replace('{n}', befores.length), befores.length ? [{ label: '復原', fn: () => restoreMany(befores) }] : [], 8000);
+}
+function restoreMany(list) {
+  BATCH = true;
+  try { list.forEach(b => putItem(Object.assign({}, b), true)); } finally { BATCH = false; }
+  persistItems(); persistSync();
+  render();
+  toast('復原了');
+}
+function openBatchTags(mode) {
+  const ids = [...S.picked];
+  if (!ids.length) return;
+  const move = mode === 'move';
+  sheet('<div class="org-head"><h3>' + (move ? '把 ' + ids.length + ' 則移到…' : '幫 ' + ids.length + ' 則加上…') + '</h3>' +
+      '<div class="small">' + (move ? '原本的分類會換成你選的' : '原本的分類會保留，再多加你選的') + '</div></div>' +
+    '<div class="org-body"><div id="bTags"></div></div>' +
+    '<div class="org-foot"><div class="sel-strip" id="bSel"></div>' +
+      '<div class="foot-row"><button type="button" class="btn line" data-sh="close">取消</button>' +
+      '<button type="button" class="btn leaf" style="flex:1.6" data-sh="ok" id="bOk"></button></div></div>', {
+    ok: () => {
+      const sel = cleanTags(PICK.sel);
+      if (!move && !sel.length) return;
+      closeSheet();
+      if (sel.length) pushRecent(sel);
+      bulkPatch(ids, it => {
+        const next = move ? sel.slice() : cleanTags([...new Set((it.tags || []).concat(sel))]);
+        return JSON.stringify(next) === JSON.stringify(it.tags || []) ? null : { tags: next };
+      }, move ? (sel.length ? '{n} 則移到 ' + sel.join('、') : '{n} 則清空分類，回到待整理') : '{n} 則加上 ' + sel.join('、'));
+    }
+  }, null, 'org');
+  const refresh = () => {
+    const n = cleanTags(PICK.sel).length;
+    $('#bSel').innerHTML = selStripHtml(PICK.sel);
+    const ok = $('#bOk');
+    ok.textContent = move ? (n ? '移過去（' + n + ' 個分類）' : '清空分類（回到待整理）') : (n ? '加上（' + n + ' 個分類）' : '先選分類');
+    ok.disabled = !move && !n;
+    ok.style.opacity = ok.disabled ? '.45' : '';
+  };
+  PICK = makePicker($('#bTags'), { sel: [], recent: true, allowAdd: true, sortable: false, onChange: refresh });
+  bindSelStrip($('#bSel'), p => { PICK.sel = toggleSel(PICK.sel, p); pickerRender(PICK); refresh(); });
+  refresh();
+}
+
+/* ---------- 挑糧倉（糧倉、嗑一顆的「分類 ▾」） ---------- */
+function openL1Picker(forWhat) {
+  const T = tagsTree(), all = live();
+  const curL1 = forWhat === 'gran' ? S.gran.l1 : S.snack.l1;
+  const withKids = forWhat === 'gran';
+  sheet('<h3>選糧倉</h3>' +
+    (T.length > 6 ? '<div class="tp-search"><input type="search" id="pkQ" placeholder="找分類…" aria-label="找分類" autocomplete="off"></div>' : '') +
+    '<div class="pk-list" id="pkList"></div>' +
+    '<button type="button" class="btn line" data-sh="close">取消</button>');
+  const draw = () => {
+    const q = ($('#pkQ') ? $('#pkQ').value : '').trim().toLowerCase();
+    let html = '';
+    T.forEach(t => {
+      const hit = !q || tagHit(t.n, q);
+      const kids = withKids && q ? t.c.filter(c => tagHit(c, q)) : [];
+      if (!hit && !kids.length) return;
+      html += '<button type="button" class="pk-row' + (curL1 === t.n ? ' on' : '') + '" data-pk="' + esc(t.n) + '"><span>' + esc(t.n) + '</span><small>' + all.filter(it => inL1(it, t.n)).length + '</small></button>' +
+        (kids.length ? '<div class="pk-kids">' + kids.map(c => '<button type="button" class="chip sm tp-hit" data-pk="' + esc(t.n) + '" data-pk2="' + esc(c) + '">' + esc(c) + '</button>').join('') + '</div>' : '');
+    });
+    $('#pkList').innerHTML = html || '<div class="small">找不到「' + esc(q) + '」</div>';
+  };
+  draw();
+  if ($('#pkQ')) $('#pkQ').addEventListener('input', draw);
+  $('#pkList').addEventListener('click', e => {
+    const b = e.target.closest('[data-pk]');
+    if (!b) return;
+    closeSheet();
+    if (forWhat === 'gran') { S.gran.l1 = b.dataset.pk; S.gran.l2 = b.dataset.pk2 || ''; S.gran.limit = 60; renderGranary(); }
+    else { S.snack.l1 = b.dataset.pk; S.snack.cur = ''; renderSnack(); }
+  });
 }
 
 /* ---------- 嗑一顆 ---------- */
@@ -748,8 +1010,10 @@ function snackPick(force) {
 }
 function renderSnack() {
   const s = S.snack, T = tagsTree();
+  if (s.l1 && !T.some(t => t.n === s.l1)) s.l1 = '';
   $('#snackL1').innerHTML = '<button type="button" class="chip-top' + (s.l1 ? '' : ' on') + '" data-sl1="">全部糧倉</button>' +
-    T.map(t => '<button type="button" class="chip-top' + (s.l1 === t.n ? ' on' : '') + '" data-sl1="' + esc(t.n) + '">' + esc(t.n) + '</button>').join('');
+    (s.l1 ? '<button type="button" class="chip-top on" data-sl1="" aria-label="取消篩選「' + esc(s.l1) + '」">' + esc(s.l1) + ' ✕</button>' : '') +
+    '<button type="button" class="chip-top" data-act="pickL1" data-for="snack">' + (s.l1 ? '換分類' : '分類') + ' ▾</button>';
   const td = $('#snackTodo'), od = $('#snackOld');
   td.textContent = (s.todo ? '✓ ' : '') + '只挑還沒看的'; td.classList.toggle('on', s.todo); td.setAttribute('aria-pressed', s.todo);
   od.textContent = (s.old ? '✓ ' : '') + '放最久的優先'; od.classList.toggle('on', s.old); od.setAttribute('aria-pressed', s.old);
@@ -787,26 +1051,29 @@ function bookmarkletHref() {
 function renderSettings() {
   const sy = S.sync, T = tagsTree();
   const tree = T.map((t, i) =>
-    '<div class="tt-l1"><div class="tt-head"><b>' + esc(t.n) + '</b>' +
-      '<button type="button" class="icon-btn" data-tg="up" data-i="' + i + '" aria-label="往上移"' + (i ? '' : ' disabled') + '>↑</button>' +
-      '<button type="button" class="icon-btn" data-tg="down" data-i="' + i + '" aria-label="往下移"' + (i < T.length - 1 ? '' : ' disabled') + '>↓</button>' +
-      '<button type="button" class="icon-btn" data-tg="ren" data-i="' + i + '" aria-label="改名">✎</button>' +
-      '<button type="button" class="icon-btn" data-tg="del" data-i="' + i + '" aria-label="刪除">✕</button></div>' +
+    '<div class="tt-l1"><div class="tt-head">' +
+      '<button type="button" class="nm" data-tg="menu" data-i="' + i + '">' + esc(t.n) + '</button>' +
+      '<button type="button" class="icon-btn" data-tg="menu" data-i="' + i + '" aria-label="「' + esc(t.n) + '」改名、搬移、合併、刪除">' + ICON.more + '</button></div>' +
       (SORTK === t.n
-        // 排序模式：直排清單，按住左邊 ⠿ 拖曳，或按 ↑↓
-        ? '<div class="sk-list" data-i="' + i + '">' + t.c.map((c, j) =>
+        // 次分類排序模式：直排清單，按住左邊 ⠿ 拖曳，或按 ↑↓
+        ? '<div class="sk-list" data-kind="kid" data-i="' + i + '">' + t.c.map((c, j) =>
             '<div class="sk-row" data-c="' + esc(c) + '"><span class="sk-grip" aria-hidden="true">⠿</span><span class="sk-name">' + esc(c) + '</span>' +
             '<button type="button" class="icon-btn" data-tg="kup" data-i="' + i + '" data-j="' + j + '" aria-label="' + esc(c) + ' 往上移"' + (j ? '' : ' disabled') + '>↑</button>' +
             '<button type="button" class="icon-btn" data-tg="kdown" data-i="' + i + '" data-j="' + j + '" aria-label="' + esc(c) + ' 往下移"' + (j < t.c.length - 1 ? '' : ' disabled') + '>↓</button></div>').join('') +
           '</div><div class="small" style="margin-top:6px">按住左邊 ⠿ 上下拖，或按 ↑↓</div>' +
           '<button type="button" class="btn leaf" style="margin-top:8px;width:100%" data-tg="sortdone" data-i="' + i + '">排好了</button>'
         : '<div class="tt-kids">' + t.c.map((c, j) =>
-            '<span class="tt-kid">' + esc(c) +
-            '<button type="button" class="icon-btn" style="width:30px;height:30px" data-tg="renk" data-i="' + i + '" data-j="' + j + '" aria-label="改名 ' + esc(c) + '">✎</button>' +
-            '<button type="button" class="icon-btn" style="width:30px;height:30px" data-tg="delk" data-i="' + i + '" data-j="' + j + '" aria-label="刪除 ' + esc(c) + '">✕</button></span>').join('') +
+            '<button type="button" class="tt-kid" data-tg="kmenu" data-i="' + i + '" data-j="' + j + '" aria-label="「' + esc(c) + '」改名、搬移、合併、刪除">' + esc(c) + '</button>').join('') +
           '<button type="button" class="chip sm dash" data-tg="addk" data-i="' + i + '">＋ 次分類</button>' +
           (t.c.length > 1 ? '<button type="button" class="chip sm dash" data-tg="sortk" data-i="' + i + '">⇅ 排序</button>' : '') + '</div>') +
       '</div>').join('');
+  const tagCard = '<div class="card"><div style="display:flex;justify-content:space-between;align-items:center;gap:8px;margin-bottom:10px"><h2 style="margin:0">標籤</h2>' +
+      (T.length > 1 && !SORTM ? '<button type="button" class="chip sm dash" data-tg="sortm">⇅ 排序主分類</button>' : '') + '</div>' +
+    (SORTM
+      ? mainSortHtml() + '<button type="button" class="btn leaf" style="margin-top:10px;width:100%" data-tg="sortmdone">排好了</button>'
+      : '<p>最多兩層，例如「AI技巧／製圖」。點分類名稱可以改名、搬到別的主分類底下、合併或刪除，所有收藏會一起改。</p>' +
+        '<div class="tag-tree">' + tree + '</div>' +
+        '<div class="btns" style="margin-top:10px"><button type="button" class="btn line" data-tg="add">＋ 新增主分類</button></div>') + '</div>';
   $('#setPanel').innerHTML =
     '<div class="card"><h2>雲端同步（Google 試算表）</h2>' +
       '<p>不填也能用，資料只存在這台裝置。填好後，手機和電腦會自動同步。</p>' +
@@ -816,17 +1083,16 @@ function renderSettings() {
       (sy.url ? '<button type="button" class="btn line" data-act="syncNow">立即同步</button>' : '') + '</div>' +
       '<p class="small" style="margin:10px 0 0" id="connMsg">' + esc(syncSummary()) + '</p></div>' +
 
-    '<div class="card"><h2>標籤</h2><p>最多兩層，例如「AI技巧／製圖」。改名會一起改到所有收藏。</p>' +
-      '<div class="tag-tree">' + tree + '</div>' +
-      '<div class="btns" style="margin-top:10px"><button type="button" class="btn line" data-tg="add">＋ 新增標籤</button></div></div>' +
+    tagCard +
 
     '<div class="card"><h2>打開時先看</h2>' + optHtml('home', 'inbox', '待整理（預設）', '先處理還沒分類的') + optHtml('home', 'granary', '糧倉', '先看全部收藏') + '</div>' +
     '<div class="card"><h2>標成看過時，要不要寫心得</h2>' +
       optHtml('noteMode', 'toast', '提示（預設）', '下方出現「寫心得」，想寫才點，不點就消失') +
       optHtml('noteMode', 'always', '每次都跳', '標成看過後直接打開心得框，可略過') +
-      optHtml('noteMode', 'never', '不跳', '只標看過，要寫再右滑打開') + '</div>' +
+      optHtml('noteMode', 'never', '不跳', '只標看過，要寫再右滑打開') +
+      '<p class="small" style="margin:4px 0 0">還沒看也能寫心得：右滑打開整理面板，按「＋ 寫心得」。</p></div>' +
     '<div class="card"><h2>從其他 App 分享進來時</h2>' +
-      optHtml('shareMode', 'quick', '快速標籤（預設）', '最近用的標籤可多選，3 秒不動就自動存好') +
+      optHtml('shareMode', 'quick', '快速標籤（預設）', '最近用的標籤可多選，按完成存好；不分類直接按返回也會存') +
       optHtml('shareMode', 'full', '直接打開完整分類', '每次都選好再存') + '</div>' +
     '<div class="card"><h2>外觀</h2>' + optHtml('theme', 'system', '跟隨系統', '手機深色模式時自動變深色') + optHtml('theme', 'light', '淺色', '') + optHtml('theme', 'dark', '深色', '') + '</div>' +
 
@@ -855,7 +1121,10 @@ let sw = null;
 function swipeStart(e) {
   const fg = e.target.closest('.row-fg');
   if (!fg || e.target.closest('button') || (e.pointerType === 'mouse' && e.button !== 0)) return;
-  const s = sw = { fg: fg, row: fg.parentElement, id: fg.dataset.id, x0: e.clientX, y0: e.clientY, dx: 0, lock: null, pid: e.pointerId };
+  const s = sw = { fg: fg, row: fg.parentElement, id: fg.dataset.id, x0: e.clientX, y0: e.clientY, dx: 0, lock: null, pid: e.pointerId,
+    noteTap: !!e.target.closest('.note-line,.note-more') };
+  // 選取模式：點一下＝選／取消，不滑動、不長按
+  if (s.row.dataset.mode === 'gran' && S.pick) { s.pick = true; return; }
   // 長按 0.5 秒＝打開整理面板（手機震一下）
   s.row.classList.add('pressing');
   s.lt = setTimeout(() => {
@@ -870,6 +1139,7 @@ function stopPress(s) { clearTimeout(s.lt); s.row.classList.remove('pressing'); 
 function swipeMove(e) {
   if (!sw || e.pointerId !== sw.pid) return;
   const dx = e.clientX - sw.x0, dy = e.clientY - sw.y0;
+  if (sw.pick) { if (Math.abs(dx) > 10 || Math.abs(dy) > 10) sw = null; return; }
   if (Math.abs(dx) > 8 || Math.abs(dy) > 8) stopPress(sw);
   if (!sw.lock) {
     if (Math.abs(dx) > 10 && Math.abs(dx) > Math.abs(dy) * 1.2) {
@@ -904,7 +1174,11 @@ function swipeEnd(e) {
     }
     return;
   }
-  if (e.type === 'pointerup' && Math.abs(e.clientX - s.x0) < 8 && Math.abs(e.clientY - s.y0) < 8) openLink(s.id);
+  if (e.type === 'pointerup' && Math.abs(e.clientX - s.x0) < 8 && Math.abs(e.clientY - s.y0) < 8) {
+    if (s.pick) togglePick(s.id, s.row);
+    else if (s.noteTap) toggleNote(s.row);
+    else openLink(s.id);
+  }
 }
 function swipeCancel() {
   if (!sw) return;
@@ -923,7 +1197,10 @@ function swipeCancel() {
   el.addEventListener('contextmenu', e => { if (e.target.closest('.row-fg')) e.preventDefault(); });
   el.addEventListener('keydown', e => {
     const fg = e.target.closest('.row-fg');
-    if (fg && (e.key === 'Enter' || e.key === ' ')) { e.preventDefault(); openLink(fg.dataset.id); }
+    if (fg && (e.key === 'Enter' || e.key === ' ')) {
+      e.preventDefault();
+      if (S.pick && fg.parentElement.dataset.mode === 'gran') togglePick(fg.dataset.id, fg.parentElement); else openLink(fg.dataset.id);
+    }
   });
 });
 
@@ -985,12 +1262,17 @@ function unSeen(id) {
   const before = patchItem(id, { seen: false, seenAt: 0 });
   toast('改成還沒看', [{ label: '復原', fn: () => restore(before) }]);
 }
+function autoGrow(el, max) {
+  const fit = () => { el.style.height = 'auto'; el.style.height = Math.min(el.scrollHeight + 4, max) + 'px'; };
+  el.addEventListener('input', fit);
+  fit();
+}
 function openNote(id) {
   const it = byId(id);
   if (!it) return;
   sheet('<h3>' + esc(it.title || '（沒有標題）') + '</h3>' +
-    '<label class="lbl" for="noteBox">吃完了，覺得怎樣？一句就好</label>' +
-    '<textarea class="input" id="noteBox" rows="3">' + esc(it.note || '') + '</textarea>' +
+    '<label class="lbl" for="noteBox">' + (it.seen ? '吃完了，覺得怎樣？' : '寫點心得（可略過）') + '</label>' +
+    '<textarea class="input" id="noteBox" maxlength="2000" style="min-height:34dvh;font-size:16px;line-height:1.7;resize:none">' + esc(it.note || '') + '</textarea>' +
     '<div class="btns"><button type="button" class="btn line" style="flex:1" data-sh="close">略過</button>' +
     '<button type="button" class="btn" style="flex:1" data-sh="saveNote">存心得</button></div>', {
     saveNote: () => {
@@ -1000,25 +1282,179 @@ function openNote(id) {
       if (v) toast('心得存好了');
     }
   });
-  setTimeout(() => { const t = $('#noteBox'); if (t) t.focus(); }, 60);
+  const nb = $('#noteBox');
+  autoGrow(nb, Math.round(window.innerHeight * 0.6));
+  setTimeout(() => { if (nb.isConnected) { nb.focus(); nb.setSelectionRange(nb.value.length, nb.value.length); } }, 60);
+}
+
+/* ================= 分類挑選器（整理面板、批次移動共用） ================= */
+// 主分類平常收合成一顆，點 ▾ 才展開次分類；上方可以搜尋；最近用過的排第一排
+let PICK = null;
+const tagHit = (name, q) => name.toLowerCase().indexOf(q) >= 0;
+function chipBtn(path, label, sel, size, hit) {
+  const on = sel.indexOf(path) >= 0;
+  return '<button type="button" class="chip ' + size + (on ? ' on' : (hit ? ' tp-hit' : '')) + '" data-path="' + esc(path) + '" aria-pressed="' + on + '">' + esc(label) + '</button>';
+}
+function makePicker(host, opts) {
+  const P = { host: host, sel: (opts.sel || []).slice(), q: '', open: new Set(), adding: '', addL1: false, sorting: false, opts: opts };
+  tagsTree().forEach(t => { if (P.sel.some(p => p.indexOf(t.n + SEP) === 0)) P.open.add(t.n); });
+  host.innerHTML =
+    '<div class="tp-main" style="display:flex;flex-direction:column;gap:12px">' +
+      '<div class="tp-top"><div class="tp-search"><input type="search" class="tp-q" placeholder="找分類…" aria-label="找分類" enterkeyhint="search" autocomplete="off">' +
+        '<button type="button" class="tp-clear hide" aria-label="清除搜尋">✕</button></div>' +
+        (opts.sortable ? '<button type="button" class="chip sm dash" data-tp="sort">⇅ 排序</button>' : '') + '</div>' +
+      '<div class="tp-groups" style="display:flex;flex-direction:column;gap:12px"></div>' +
+    '</div>' +
+    '<div class="tp-sort hide"></div>';
+  const qIn = $('.tp-q', host);
+  qIn.addEventListener('input', () => { P.q = qIn.value; $('.tp-clear', host).classList.toggle('hide', !P.q); pickerRender(P); });
+  qIn.addEventListener('keydown', e => {
+    if (e.key === 'Escape' && P.q) { e.stopPropagation(); setQ(''); }
+    if (e.key === 'Enter') { e.preventDefault(); qIn.blur(); }
+  });
+  const setQ = v => { P.q = v; qIn.value = v; $('.tp-clear', host).classList.toggle('hide', !v); pickerRender(P); };
+  const changed = () => { pickerRender(P); if (opts.onChange) opts.onChange(P.sel); };
+  const kidAdd = l1 => {
+    const k = $('.kid-in', host);
+    const v = (k ? k.value : '').replace(/[\/／>＞]/g, '').trim();
+    P.adding = '';
+    if (v) { const p = addTagPath(l1 + SEP + v); if (p && P.sel.indexOf(p) < 0) P.sel = toggleSel(P.sel, p); }
+    changed();
+  };
+  const l1Add = () => {
+    const el = $('.l1-in', host);
+    const p = addTagPath(el ? el.value : '');
+    P.addL1 = false;
+    if (p && P.sel.indexOf(p) < 0) P.sel = toggleSel(P.sel, p);
+    changed();
+  };
+  host.addEventListener('click', e => {
+    const t = e.target;
+    let b;
+    if (t.closest('.tp-clear')) { setQ(''); qIn.focus(); return; }
+    if ((b = t.closest('[data-tp]'))) {
+      const a = b.dataset.tp;
+      if (a === 'sort') { P.sorting = true; pickerRender(P); if (opts.onSort) opts.onSort(true); }
+      else if (a === 'sortdone') { P.sorting = false; pickerRender(P); if (opts.onSort) opts.onSort(false); toast('主分類排好了'); }
+      else if (a === 'addq') { const p = addTagPath(P.q); if (p && P.sel.indexOf(p) < 0) P.sel = toggleSel(P.sel, p); setQ(''); if (opts.onChange) opts.onChange(P.sel); }
+      else if (a === 'newL1') { P.addL1 = true; pickerRender(P); const el = $('.l1-in', host); if (el) el.focus(); }
+      else if (a === 'l1ok') l1Add();
+      else if (a === 'l1x') { P.addL1 = false; pickerRender(P); }
+      return;
+    }
+    if ((b = t.closest('[data-ms]'))) { moveMain(Number(b.dataset.i), b.dataset.ms); pickerRender(P); return; }
+    if ((b = t.closest('[data-exp]'))) { P.open.add(b.dataset.exp); pickerRender(P); return; }
+    if ((b = t.closest('[data-fold]'))) { P.open.delete(b.dataset.fold); P.adding = P.adding === b.dataset.fold ? '' : P.adding; pickerRender(P); return; }
+    if ((b = t.closest('[data-addk]'))) { P.adding = b.dataset.addk; P.open.add(P.adding); pickerRender(P); const k = $('.kid-in', host); if (k) k.focus(); return; }
+    if ((b = t.closest('[data-kidok]'))) { kidAdd(b.dataset.kidok); return; }
+    if (t.closest('[data-kidx]')) { P.adding = ''; pickerRender(P); return; }
+    if ((b = t.closest('[data-path]'))) {
+      const path = b.dataset.path;
+      P.sel = toggleSel(P.sel, path);
+      // 點主分類時順便展開，方便再挑細的
+      const l1 = splitTag(path)[0], tn = tagsTree().find(x => x.n === l1);
+      if (tn && tn.c.length && P.sel.indexOf(path) >= 0) P.open.add(l1);
+      changed();
+    }
+  });
+  host.addEventListener('keydown', e => {
+    if (e.target.classList.contains('kid-in')) {
+      if (e.key === 'Enter') { e.preventDefault(); kidAdd(P.adding); }
+      else if (e.key === 'Escape') { e.stopPropagation(); P.adding = ''; pickerRender(P); }
+    }
+    if (e.target.classList.contains('l1-in')) {
+      if (e.key === 'Enter') { e.preventDefault(); l1Add(); }
+      else if (e.key === 'Escape') { e.stopPropagation(); P.addL1 = false; pickerRender(P); }
+    }
+  });
+  pickerRender(P);
+  return P;
+}
+function pickerRender(P) {
+  const host = P.host;
+  if (!host.isConnected) return;
+  $('.tp-main', host).classList.toggle('hide', P.sorting);
+  $('.tp-sort', host).classList.toggle('hide', !P.sorting);
+  if (P.sorting) {
+    $('.tp-sort', host).innerHTML = '<div class="lbl">主分類排序</div>' + mainSortHtml() +
+      '<button type="button" class="btn leaf" style="margin-top:10px;width:100%" data-tp="sortdone">排好了</button>';
+    return;
+  }
+  const k = $('.kid-in', host), draft = k ? k.value : '', hadFocus = k && document.activeElement === k;
+  const T = tagsTree(), q = P.q.trim().toLowerCase(), sel = P.sel;
+  let out = '';
+  if (!q && P.opts.recent && T.length > 3) {
+    const rec = recentTags(5);
+    if (rec.length) out += '<div class="tp-sec"><span class="lbl">最近用過</span><div class="tp-wrap">' + rec.map(p => chipBtn(p, p, sel, 'sm')).join('') + '</div></div>';
+  }
+  const groups = [];
+  T.forEach(t => {
+    const l1hit = !!q && tagHit(t.n, q);
+    const kids = q ? (l1hit ? t.c : t.c.filter(c => tagHit(c, q))) : t.c;
+    if (q && !l1hit && !kids.length) return;
+    const on = sel.indexOf(t.n) >= 0, part = sel.some(p => p.indexOf(t.n + SEP) === 0);
+    const open = !!q || P.open.has(t.n) || P.adding === t.n;
+    if (!open) {
+      groups.push('<span class="tp-g' + (on ? ' on' : (part ? ' part' : '')) + '">' +
+        '<button type="button" class="tp-name" data-path="' + esc(t.n) + '" aria-pressed="' + on + '">' + esc(t.n) + '</button>' +
+        '<button type="button" class="tp-exp" data-exp="' + esc(t.n) + '" aria-expanded="false" aria-label="展開「' + esc(t.n) + '」的次分類">' + (t.c.length ? t.c.length + ' ▾' : '▾') + '</button></span>');
+      return;
+    }
+    let add = '';
+    if (P.opts.allowAdd) {
+      add = P.adding === t.n
+        ? '<span class="kid-add"><input class="kid-in" maxlength="12" enterkeyhint="done" value="' + esc(draft) + '" placeholder="新的次分類" aria-label="在「' + esc(t.n) + '」底下新增次分類">' +
+          '<button type="button" class="kid-ok" data-kidok="' + esc(t.n) + '">加入</button>' +
+          '<button type="button" class="kid-x" data-kidx="1" aria-label="取消">✕</button></span>'
+        : '<button type="button" class="chip sm dash kid-plus" data-addk="' + esc(t.n) + '" aria-label="在「' + esc(t.n) + '」底下新增次分類">＋</button>';
+    }
+    groups.push('<div class="tp-open">' +
+      '<button type="button" class="chip l1' + (on ? ' on' : (part ? ' part' : (l1hit ? ' tp-hit' : ''))) + '" data-path="' + esc(t.n) + '" aria-pressed="' + on + '">' + esc(t.n) + '</button>' +
+      kids.map(c => chipBtn(t.n + SEP + c, c, sel, 'sm', !!q && tagHit(c, q))).join('') + add +
+      (q ? '' : '<button type="button" class="tp-fold" data-fold="' + esc(t.n) + '" aria-expanded="true">收起 ▴</button>') + '</div>');
+  });
+  if (groups.length) out += '<div class="tp-sec">' + (q ? '' : '<span class="lbl">全部分類</span>') + '<div class="tp-wrap">' + groups.join('') + '</div></div>';
+  if (q && !groups.length) out += '<div class="small">找不到「' + esc(P.q.trim()) + '」</div>';
+  if (P.opts.allowAdd) {
+    const raw = P.q.trim().replace(/\s*[\/／>＞]\s*/g, SEP);
+    if (raw && allPaths().indexOf(raw) < 0) out += '<div><button type="button" class="chip dash" data-tp="addq">＋ 新增「' + esc(raw) + '」</button></div>';
+    else if (!raw) out += P.addL1
+      ? '<div style="display:flex;gap:8px"><input class="input l1-in" maxlength="25" enterkeyhint="done" placeholder="主分類名稱，例如 閱讀" aria-label="新增主分類" style="flex:1">' +
+        '<button type="button" class="btn line" data-tp="l1ok">加入</button><button type="button" class="icon-btn" data-tp="l1x" aria-label="取消">✕</button></div>'
+      : '<div><button type="button" class="chip dash" data-tp="newL1">＋ 新增主分類</button></div>';
+  }
+  $('.tp-groups', host).innerHTML = out;
+  if (hadFocus && $('.kid-in', host)) { const n = $('.kid-in', host); n.focus(); n.setSelectionRange(n.value.length, n.value.length); }
+}
+function selStripHtml(sel) {
+  const tags = cleanTags(sel);
+  return tags.length
+    ? tags.map(p => '<button type="button" class="sel-pill" data-unsel="' + esc(p) + '" aria-label="取消「' + esc(p) + '」">' + esc(p) + '<i aria-hidden="true">✕</i></button>').join('')
+    : '<span class="sel-none">還沒選分類</span>';
+}
+function bindSelStrip(el, onUnsel) {
+  el.addEventListener('click', e => { const b = e.target.closest('[data-unsel]'); if (b) onUnsel(b.dataset.unsel); });
+}
+/* 主分類排序清單（設定頁、整理面板共用）：按住 ⠿ 拖，或按 ↑↓ */
+function mainSortHtml() {
+  const T = tagsTree();
+  return '<div class="sk-list" data-kind="main">' + T.map((t, i) =>
+    '<div class="sk-row" data-c="' + esc(t.n) + '"><span class="sk-grip" aria-hidden="true">⠿</span>' +
+    '<span class="sk-name">' + esc(t.n) + (t.c.length ? '<span class="small">　' + t.c.length + ' 個次分類</span>' : '') + '</span>' +
+    '<button type="button" class="icon-btn" data-ms="up" data-i="' + i + '" aria-label="' + esc(t.n) + ' 往上移"' + (i ? '' : ' disabled') + '>↑</button>' +
+    '<button type="button" class="icon-btn" data-ms="down" data-i="' + i + '" aria-label="' + esc(t.n) + ' 往下移"' + (i < T.length - 1 ? '' : ' disabled') + '>↓</button></div>').join('') +
+    '</div><div class="small" style="margin-top:6px">按住左邊 ⠿ 上下拖，或按 ↑↓</div>';
+}
+function moveMain(i, dir) {
+  const tree = JSON.parse(JSON.stringify(tagsTree()));
+  const k = dir === 'up' ? i - 1 : i + 1;
+  if (k < 0 || k >= tree.length) return;
+  [tree[i], tree[k]] = [tree[k], tree[i]];
+  setTags(tree);
 }
 
 /* ================= 整理面板 ================= */
 let ORG = null;
-function chipsHtml(sel, adding, draft) {
-  return tagsTree().map(t => {
-    const part = sel.some(p => p.indexOf(t.n + SEP) === 0);
-    // 每個主分類最後一顆「＋」：點了就地輸入次分類，不用再打主分類
-    const add = adding === t.n
-      ? '<span class="kid-add"><input class="kid-in" id="orgKid" maxlength="12" enterkeyhint="done" value="' + esc(draft || '') + '" placeholder="新的次分類" aria-label="在「' + esc(t.n) + '」底下新增次分類">' +
-        '<button type="button" class="kid-ok" data-kidok="' + esc(t.n) + '">加入</button>' +
-        '<button type="button" class="kid-x" data-kidx="1" aria-label="取消">✕</button></span>'
-      : '<button type="button" class="chip sm dash kid-plus" data-addk="' + esc(t.n) + '" aria-label="在「' + esc(t.n) + '」底下新增次分類">＋</button>';
-    return '<div class="group"><button type="button" class="chip l1' + (sel.indexOf(t.n) >= 0 ? ' on' : (part ? ' part' : '')) + '" data-path="' + esc(t.n) + '" aria-pressed="' + (sel.indexOf(t.n) >= 0) + '">' + esc(t.n) + '</button>' +
-      t.c.map(c => { const p = t.n + SEP + c; return '<button type="button" class="chip sm' + (sel.indexOf(p) >= 0 ? ' on' : '') + '" data-path="' + esc(p) + '" aria-pressed="' + (sel.indexOf(p) >= 0) + '">' + esc(c) + '</button>'; }).join('') +
-      add + '</div>';
-  }).join('');
-}
 function toggleSel(sel, path) {
   if (sel.indexOf(path) >= 0) return sel.filter(p => p !== path);
   const [l1, l2] = splitTag(path);
@@ -1039,53 +1475,42 @@ function addTagPath(raw) {
   setTags(tree);
   return l2 ? l1 + SEP + l2 : l1;
 }
+function notePreview(v) { v = String(v || '').replace(/\s+/g, ' ').trim(); return v ? '心得：' + v : '＋ 寫心得'; }
 function openOrganize(id, opts) {
   opts = opts || {};
   const it = byId(id);
   if (!it) return;
   closePrompt();
-  ORG = { id: id, sel: (opts.sel || it.tags || []).slice(), seen: !!it.seen, fromShare: !!opts.fromShare, adding: '' };
+  ORG = { id: id, seen: !!it.seen, fromShare: !!opts.fromShare };
+  const canRefetch = S.sync.url && !it.title;
   sheet(
-    '<div style="display:flex;justify-content:space-between;align-items:center;min-height:34px"><label class="lbl" for="orgTitle">標題</label>' +
-      (S.sync.url && !it.title ? '<button type="button" class="link-btn" id="orgRefetch" data-sh="refetch" style="color:var(--leaf);font-weight:900">' + (metaQ.indexOf(id) >= 0 || (metaRunning && metaPending(id)) ? '抓取中…' : '↻ 重抓標題') + '</button>' : '') + '</div>' +
-    '<input class="input" id="orgTitle" value="' + esc(it.title) + '" placeholder="' + (it.title ? '' : '沒抓到標題，補一句之後才找得到') + '" maxlength="300">' +
-    '<div class="small" style="margin-top:-6px;word-break:break-all">' + esc(platOf(it.url).name) + '　' + esc(it.url.length > 70 ? it.url.slice(0, 70) + '…' : it.url) + '</div>' +
-    '<div class="lbl">收進哪些糧倉？可以多選</div>' +
-    '<div class="groups" id="orgChips">' + chipsHtml(ORG.sel) + '</div>' +
-    '<div><button type="button" class="chip dash" data-sh="newL1" id="orgNewBtn">＋ 新增主分類</button></div>' +
-    '<div style="display:flex;gap:8px" class="hide" id="orgNewRow"><input class="input" id="orgNew" maxlength="25" enterkeyhint="done" placeholder="主分類名稱，例如 閱讀" aria-label="新增主分類" style="flex:1">' +
-    '<button type="button" class="btn line" data-sh="addTag">加入</button></div>' +
-    '<div class="small" id="orgSel"></div>' +
-    '<button type="button" class="switch" id="orgSeen" aria-pressed="' + ORG.seen + '"><span>已經看過了</span><span class="track"><i></i></span></button>' +
-    '<div id="orgNoteWrap" class="' + (ORG.seen ? '' : 'hide') + '" style="display:flex;flex-direction:column;gap:6px">' +
-      '<label class="lbl" for="orgNote">吃完了，覺得怎樣？一句就好（可略過）</label>' +
-      '<textarea class="input" id="orgNote" rows="2">' + esc(it.note || '') + '</textarea></div>' +
-    '<button type="button" class="btn leaf" style="min-height:52px;font-size:16px" data-sh="finish" id="orgFinish">完成</button>' +
-    '<div class="btns" style="justify-content:space-between">' +
-      '<button type="button" class="btn line" data-sh="close">' + (ORG.fromShare ? '先放收件匣' : '先不要') + '</button>' +
-      '<button type="button" class="btn danger" data-sh="del">刪除</button></div>',
+    '<div class="org-head">' +
+      '<div class="org-title-row"><input class="input" id="orgTitle" value="' + esc(it.title) + '" placeholder="' + (it.title ? '標題' : '沒抓到標題，補一句之後才找得到') + '" maxlength="300" aria-label="標題">' +
+        '<button type="button" class="icon-btn" data-sh="del" aria-label="刪除這則" title="刪除這則">' + ICON.trash + '</button></div>' +
+      '<div class="org-meta"><span class="u">' + esc(platOf(it.url).name) + '　' + esc(it.url) + '</span>' +
+        (canRefetch ? '<button type="button" class="link-btn" id="orgRefetch" data-sh="refetch" style="color:var(--leaf);font-weight:900;flex:none">' + (metaQ.indexOf(id) >= 0 || (metaRunning && metaPending(id)) ? '抓取中…' : '↻ 重抓標題') + '</button>' : '') + '</div>' +
+    '</div>' +
+    '<div class="org-body">' +
+      '<div id="orgTags"></div>' +
+      '<div id="orgNoteBox" class="hide" style="display:flex;flex-direction:column;gap:6px;flex:1">' +
+        '<label class="lbl" for="orgNote">心得（可略過，看之前想寫為什麼存也可以）</label>' +
+        '<textarea class="input org-note" id="orgNote" maxlength="2000">' + esc(it.note || '') + '</textarea></div>' +
+    '</div>' +
+    '<div class="org-foot" id="orgFoot">' +
+      '<div class="sel-strip" id="orgSel"></div>' +
+      '<div class="foot-row"><button type="button" class="tgl" id="orgSeen" aria-pressed="' + ORG.seen + '">' + ICON.eyeS + '看過了</button>' +
+        '<button type="button" class="tgl" id="orgNoteBtn"><span class="pv"></span></button></div>' +
+      '<div class="foot-row"><button type="button" class="btn line" data-sh="close">' + (ORG.fromShare ? '先放待整理' : '先不要') + '</button>' +
+        '<button type="button" class="btn leaf" style="flex:1.6" data-sh="finish" id="orgFinish">完成</button></div>' +
+    '</div>' +
+    '<div class="org-foot hide" id="orgNoteFoot"><div class="foot-row"><span class="note-count" id="orgCount"></span>' +
+      '<button type="button" class="btn leaf" data-sh="noteDone">好了</button></div></div>',
     {
-      addTag: () => {
-        const p = addTagPath($('#orgNew').value);
-        if (!p) return;
-        $('#orgNew').value = '';
-        if (ORG.sel.indexOf(p) < 0) ORG.sel = toggleSel(ORG.sel, p);
-        $('#orgNewRow').classList.add('hide');
-        $('#orgNewBtn').classList.remove('hide');
-        refreshOrg();
-      },
-      newL1: () => {
-        ORG.adding = '';
-        refreshOrg();
-        $('#orgNewBtn').classList.add('hide');
-        $('#orgNewRow').classList.remove('hide');
-        $('#orgNew').focus();
-      },
       finish: () => {
         const title = $('#orgTitle').value.trim();
         const seen = ORG.seen;
-        const note = seen ? $('#orgNote').value.trim() : (it.note || '');
-        const tags = cleanTags(ORG.sel);
+        const note = $('#orgNote').value.trim().slice(0, 2000);
+        const tags = cleanTags(PICK.sel);
         const before = patchItem(id, { title: title, tags: tags, seen: seen, seenAt: seen ? (it.seenAt || now()) : 0, note: note }, true);
         if (tags.length) pushRecent(tags);
         closeSheet();
@@ -1108,47 +1533,39 @@ function openOrganize(id, opts) {
         delete S.metaTried[id]; delete metaFail[id]; save('tt_meta', S.metaTried);
         btn.disabled = true; btn.textContent = '抓取中…';
         queueMeta(id, true);
-      }
-    });
-  const kidAdd = l1 => {
-    const v = ($('#orgKid') ? $('#orgKid').value : '').replace(/[\/／>＞]/g, '').trim();
-    ORG.adding = '';
-    if (v) {
-      const p = addTagPath(l1 + SEP + v);
-      if (p && ORG.sel.indexOf(p) < 0) ORG.sel = toggleSel(ORG.sel, p);
-    }
-    refreshOrg();
-  };
-  $('#orgChips').addEventListener('click', e => {
-    let b;
-    if ((b = e.target.closest('[data-addk]'))) { ORG.adding = b.dataset.addk; refreshOrg(); const k = $('#orgKid'); if (k) k.focus(); return; }
-    if ((b = e.target.closest('[data-kidok]'))) { kidAdd(b.dataset.kidok); return; }
-    if (e.target.closest('[data-kidx]')) { ORG.adding = ''; refreshOrg(); return; }
-    b = e.target.closest('[data-path]');
-    if (!b) return;
-    ORG.sel = toggleSel(ORG.sel, b.dataset.path);
-    refreshOrg();
+      },
+      noteDone: () => orgMode('tags')
+    }, null, 'org');
+  PICK = makePicker($('#orgTags'), {
+    sel: opts.sel || it.tags || [], recent: true, allowAdd: true, sortable: true,
+    onChange: refreshOrg,
+    onSort: on => $('#orgFoot').classList.toggle('hide', on)
   });
-  $('#orgChips').addEventListener('keydown', e => {
-    if (e.target.id !== 'orgKid') return;
-    if (e.key === 'Enter') { e.preventDefault(); kidAdd(ORG.adding); }
-    else if (e.key === 'Escape') { e.stopPropagation(); ORG.adding = ''; refreshOrg(); }
-  });
-  $('#orgSeen').addEventListener('click', () => {
-    ORG.seen = !ORG.seen;
-    $('#orgSeen').setAttribute('aria-pressed', ORG.seen);
-    $('#orgNoteWrap').classList.toggle('hide', !ORG.seen);
-  });
-  $('#orgNew').addEventListener('keydown', e => { if (e.key === 'Enter') { e.preventDefault(); $('[data-sh="addTag"]').click(); } });
+  bindSelStrip($('#orgSel'), p => { PICK.sel = toggleSel(PICK.sel, p); pickerRender(PICK); refreshOrg(); });
+  $('#orgSeen').addEventListener('click', () => { ORG.seen = !ORG.seen; $('#orgSeen').setAttribute('aria-pressed', ORG.seen); });
+  $('#orgNoteBtn').addEventListener('click', () => orgMode('note'));
+  $('#orgNote').addEventListener('input', noteCount);
   refreshOrg();
 }
+function noteCount() { const n = $('#orgNote'), c = $('#orgCount'); if (n && c) c.textContent = n.value.length + ' / 2000'; }
+/** 整理面板切換：tags＝選分類、note＝專心寫心得（分類先藏起來，整個面板給心得用） */
+function orgMode(m) {
+  $('#orgTags').classList.toggle('hide', m !== 'tags');
+  $('#orgNoteBox').classList.toggle('hide', m !== 'note');
+  $('#orgFoot').classList.toggle('hide', m !== 'tags');
+  $('#orgNoteFoot').classList.toggle('hide', m !== 'note');
+  if (m === 'note') { noteCount(); const n = $('#orgNote'); n.focus(); n.setSelectionRange(n.value.length, n.value.length); }
+  else refreshOrg();
+}
 function refreshOrg() {
-  const k = $('#orgKid'), draft = k ? k.value : '', hadFocus = k && document.activeElement === k;
-  $('#orgChips').innerHTML = chipsHtml(ORG.sel, ORG.adding, draft);
-  if (hadFocus && $('#orgKid')) $('#orgKid').focus();
-  const tags = cleanTags(ORG.sel);
-  $('#orgSel').textContent = tags.length ? '已選：' + tags.join('、') : '還沒選（不選就先留在待整理）';
-  $('#orgFinish').textContent = tags.length ? '收進糧倉（' + tags.length + ' 個）' : '完成';
+  if (!PICK || !$('#orgSel')) return;
+  const tags = cleanTags(PICK.sel);
+  $('#orgSel').innerHTML = selStripHtml(PICK.sel);
+  $('#orgFinish').textContent = tags.length ? '收進糧倉（' + tags.length + '）' : '完成';
+  const nv = $('#orgNote').value;
+  const nb = $('#orgNoteBtn');
+  $('.pv', nb).textContent = notePreview(nv);
+  nb.classList.toggle('has', !!nv.trim());
 }
 
 /* ================= 分享進來 ================= */
@@ -1181,19 +1598,28 @@ function handleIncoming(params) {
   if (S.pref.shareMode === 'full') { openOrganize(r.item.id, { fromShare: true }); return; }
   openShareCard(r.item.id);
 }
+// 分享卡：不倒數，等你按完成；按返回或點外面也會存（選了的分類、補的標題一起存）
 function openShareCard(id) {
   const it = byId(id);
-  // 標題還在抓：先等（最多 10 秒），抓完才開始 3 秒倒數
   const waiting = !it.title && metaPending(id);
-  SHARE = { id: id, sel: [], left: 3, touched: false, waiting: waiting, waitLeft: 10 };
-  if (waiting) queueMeta(id, true);
+  SHARE = { id: id, sel: [], waiting: waiting };
+  if (waiting) {
+    queueMeta(id, true);
+    SHARE.wt = setTimeout(() => {
+      if (!SHARE || SHARE.id !== id || !SHARE.waiting) return;
+      SHARE.waiting = false;
+      const st = $('#shTitle');
+      if (st) st.textContent = platOf(it.url).name + ' 的連結（標題還在抓，存好後會自動補上）';
+      SHARE.render();
+    }, 10000);
+  }
   const chips = recentTags(3);
   const renderChips = () => {
     if (!SHARE || !$('#shChips')) return;
-    $('#shChips').innerHTML = chips.map(p => '<button type="button" class="chip' + (SHARE.sel.indexOf(p) >= 0 ? ' on' : '') + '" data-path="' + esc(p) + '">' + esc(p) + '</button>').join('') +
+    $('#shChips').innerHTML = chips.map(p => '<button type="button" class="chip' + (SHARE.sel.indexOf(p) >= 0 ? ' on' : '') + '" data-path="' + esc(p) + '" aria-pressed="' + (SHARE.sel.indexOf(p) >= 0) + '">' + esc(p) + '</button>').join('') +
       '<button type="button" class="chip dash" data-sh="more">' + (chips.length ? '更多分類…' : '＋ 建立標籤') + '</button>';
     $('#shDone').textContent = SHARE.sel.length ? '完成，收進 ' + SHARE.sel.length + ' 個糧倉' : '完成，先放待整理';
-    $('#shHint').textContent = SHARE.touched ? '選好按完成' : (SHARE.waiting ? '抓標題中…' : SHARE.left + ' 秒後自動存好');
+    $('#shHint').textContent = SHARE.waiting ? '抓標題中…' : '';
   };
   SHARE.render = renderChips;
   sheet('<div style="display:flex;justify-content:space-between;align-items:center"><span style="font-size:18px;font-weight:900">囤好了！</span><span class="small" id="shHint"></span></div>' +
@@ -1202,52 +1628,34 @@ function openShareCard(id) {
     '<div class="lbl">順便分類？可以點好幾個</div>' +
     '<div style="display:flex;flex-wrap:wrap;gap:8px" id="shChips"></div>' +
     '<button type="button" class="btn" style="min-height:52px;font-size:16px" data-sh="done" id="shDone"></button>' +
-    '<div class="small" style="text-align:center">存好後按手機的「返回」，就會回到原本的 App</div>', {
+    '<div class="small" style="text-align:center">已經存好了。不想分類就直接按手機的「返回」</div>', {
     done: () => shareDone(),
     more: () => {
-      clearInterval(SHARE.iv);
+      clearTimeout(SHARE.wt);
       const sel = SHARE.sel.slice(), name = shareName();
       SHARE = null;
       if (name) patchItem(id, { title: name }, true);
       openOrganize(id, { sel: sel, fromShare: true });
     }
-  }, () => { if (SHARE) { clearInterval(SHARE.iv); SHARE = null; } });
+  }, () => { if (SHARE) shareDone(); });
   const nm = $('#shName');
   if (nm) {
-    // 點輸入框就停止倒數，等你按完成
-    const stop = () => { if (SHARE && !SHARE.touched) { SHARE.touched = true; renderChips(); } };
-    nm.addEventListener('focus', stop);
-    nm.addEventListener('input', stop);
+    // 面板關掉後元素就不在了，所以邊打邊記下來（按返回也存得到）
+    nm.addEventListener('input', () => { if (SHARE) SHARE.name = nm.value; });
     nm.addEventListener('keydown', e => { if (e.key === 'Enter') { e.preventDefault(); shareDone(); } });
   }
   $('#shChips').addEventListener('click', e => {
     const b = e.target.closest('[data-path]');
     if (!b || !SHARE) return;
-    SHARE.touched = true;
     SHARE.sel = toggleSel(SHARE.sel, b.dataset.path);
     renderChips();
   });
   renderChips();
-  SHARE.iv = setInterval(() => {
-    if (!SHARE) return;
-    if (SHARE.touched) return;
-    if (SHARE.waiting) {
-      if (--SHARE.waitLeft <= 0) {
-        SHARE.waiting = false;
-        const st = $('#shTitle');
-        if (st) st.textContent = platOf(it.url).name + ' 的連結（標題還在抓，存好後會自動補上）';
-      }
-      renderChips();
-      return;
-    }
-    SHARE.left--;
-    if (SHARE.left <= 0) shareDone(); else renderChips();
-  }, 1000);
 }
-function shareName() { const el = $('#shName'); return el ? el.value.trim().slice(0, 300) : ''; }
+function shareName() { return SHARE ? String(SHARE.name || '').trim().slice(0, 300) : ''; }
 function shareDone() {
   if (!SHARE) return;
-  clearInterval(SHARE.iv);
+  clearTimeout(SHARE.wt);
   const { id, sel } = SHARE;
   const name = shareName();
   SHARE = null;
@@ -1366,12 +1774,6 @@ function importBackup(file) {
 }
 
 /* ================= 標籤管理 ================= */
-function retag(fn) {
-  live().forEach(it => {
-    const next = fn(it.tags || []);
-    if (JSON.stringify(next) !== JSON.stringify(it.tags || [])) putItem(Object.assign({}, it, { tags: next }), true);
-  });
-}
 function countUsing(pred) { return live().filter(it => (it.tags || []).some(pred)).length; }
 function askText(title, value, placeholder) {
   return new Promise(res => {
@@ -1391,9 +1793,12 @@ function askConfirm(title, body, okText, danger) {
   });
 }
 let SORTK = '';   // 正在排序次分類的主分類名稱
+let SORTM = false; // 設定頁正在排序主分類
 async function tagAction(act, i, j) {
   const tree = JSON.parse(JSON.stringify(tagsTree()));
   const t = tree[i];
+  if (act === 'sortm') { SORTM = true; SORTK = ''; renderSettings(); return; }
+  if (act === 'sortmdone') { SORTM = false; renderSettings(); toast('主分類排好了'); return; }
   if (act === 'sortk') { SORTK = t ? t.n : ''; renderSettings(); return; }
   if (act === 'sortdone') { SORTK = ''; renderSettings(); toast('次分類排好了'); return; }
   if (act === 'kup' || act === 'kdown') {
@@ -1406,9 +1811,11 @@ async function tagAction(act, i, j) {
     if (b && !b.disabled) b.focus();
     return;
   }
-  if (act !== 'sortk') SORTK = '';
+  SORTK = '';
+  if (act === 'menu') { if (t) mainMenu(t.n); return; }
+  if (act === 'kmenu') { if (t) kidMenu(t.n, t.c[j]); return; }
   if (act === 'add') {
-    const v = await askText('新增標籤', '', '例如：AI技巧');
+    const v = await askText('新增主分類', '', '例如：AI技巧');
     if (!v) return;
     if (tree.some(x => x.n === v)) { toast('已經有「' + v + '」了'); return; }
     tree.push({ n: v, c: [] }); setTags(tree);
@@ -1417,50 +1824,188 @@ async function tagAction(act, i, j) {
     if (!v) return;
     if (t.c.indexOf(v) >= 0) { toast('已經有了'); return; }
     t.c.push(v); setTags(tree);
-  } else if (act === 'up' || act === 'down') {
-    const k = act === 'up' ? i - 1 : i + 1;
-    if (k < 0 || k >= tree.length) return;
-    [tree[i], tree[k]] = [tree[k], tree[i]]; setTags(tree);
-  } else if (act === 'ren') {
-    const v = await askText('「' + t.n + '」改名', t.n);
-    if (!v || v === t.n) return;
-    if (tree.some(x => x.n === v)) { toast('已經有「' + v + '」了'); return; }
-    const old = t.n; t.n = v; setTags(tree);
-    retag(tags => tags.map(p => p === old ? v : (p.indexOf(old + SEP) === 0 ? v + p.slice(old.length) : p)));
-    S.recent = S.recent.map(p => p === old ? v : (p.indexOf(old + SEP) === 0 ? v + p.slice(old.length) : p)); save('tt_recent', S.recent);
-  } else if (act === 'renk') {
-    const oldC = t.c[j];
-    const v = await askText('「' + oldC + '」改名', oldC);
-    if (!v || v === oldC) return;
-    if (t.c.indexOf(v) >= 0) { toast('已經有了'); return; }
-    t.c[j] = v; setTags(tree);
-    const o = t.n + SEP + oldC, nw = t.n + SEP + v;
-    retag(tags => tags.map(p => p === o ? nw : p));
-  } else if (act === 'del') {
-    const n = countUsing(p => p === t.n || p.indexOf(t.n + SEP) === 0);
-    const ok = await askConfirm('刪除「' + t.n + '」？', n ? '有 ' + n + ' 則收藏用到它（含次分類），會一起拿掉這個標籤；沒有其他標籤的會回到「待整理」。' : '目前沒有收藏用到它。', '刪除', true);
-    if (!ok) return;
-    const old = t.n; tree.splice(i, 1); setTags(tree);
-    retag(tags => tags.filter(p => p !== old && p.indexOf(old + SEP) !== 0));
-  } else if (act === 'delk') {
-    const p0 = t.n + SEP + t.c[j];
-    const n = countUsing(p => p === p0);
-    const ok = await askConfirm('刪除「' + t.c[j] + '」？', n ? '有 ' + n + ' 則收藏用到它，會改成只放在「' + esc(t.n) + '」。' : '目前沒有收藏用到它。', '刪除', true);
-    if (!ok) return;
-    t.c.splice(j, 1); setTags(tree);
-    retag(tags => cleanTags([...new Set(tags.map(p => p === p0 ? t.n : p))]));
   }
-  persistItems();
   render();
+}
+
+/* ---------- 分類的改名、搬移、合併、刪除（每次都能復原） ---------- */
+const inMain = (p, A) => p === A || p.indexOf(A + SEP) === 0;
+const findT = (tree, n) => tree.find(x => x.n === n);
+function addKid(t, c) { if (t.c.indexOf(c) < 0) t.c.push(c); }
+/** 改分類樹＋把每則收藏的標籤換過去；提示可復原 */
+function tagOp(msg, mutate, mapPath) {
+  const oldTree = JSON.parse(JSON.stringify(tagsTree()));
+  const tree = JSON.parse(JSON.stringify(oldTree));
+  if (mutate(tree) === false) return;
+  const oldRecent = S.recent.slice();
+  const befores = [];
+  BATCH = true;
+  try {
+    live().forEach(it => {
+      const cur = it.tags || [];
+      const next = cleanTags([...new Set(cur.map(mapPath).filter(Boolean))]);
+      if (JSON.stringify(next) !== JSON.stringify(cur)) {
+        befores.push(JSON.parse(JSON.stringify(it)));
+        putItem(Object.assign({}, it, { tags: next }), true);
+      }
+    });
+  } finally { BATCH = false; }
+  persistItems(); persistSync();
+  setTags(tree);
+  S.recent = [...new Set(S.recent.map(mapPath).filter(Boolean))]; save('tt_recent', S.recent);
+  render();
+  toast(msg + (befores.length ? '，改了 ' + befores.length + ' 則' : ''), [{ label: '復原', fn: () => {
+    setTags(oldTree); S.recent = oldRecent; save('tt_recent', S.recent); restoreMany(befores);
+  } }], 8000);
+}
+function actionSheet(title, desc, acts) {
+  acts = acts.filter(Boolean);
+  const h = {};
+  acts.forEach((a, k) => { h['a' + k] = a.fn; });
+  sheet('<h3>' + esc(title) + '</h3>' + (desc ? '<div class="small" style="margin-top:-6px">' + desc + '</div>' : '') +
+    '<div class="act-list">' + acts.map((a, k) => '<button type="button" class="btn ' + (a.danger ? 'danger' : 'line') + '" data-sh="a' + k + '">' + esc(a.label) + '</button>').join('') + '</div>' +
+    '<button type="button" class="btn" data-sh="close">取消</button>', h);
+}
+/** 從清單挑一個分類（可搜尋）；回傳路徑，取消回傳空字串 */
+function pickTarget(title, desc, paths) {
+  return new Promise(res => {
+    let done = false;
+    const finish = v => { if (done) return; done = true; res(v); };
+    sheet('<h3>' + esc(title) + '</h3>' + (desc ? '<div class="small" style="margin-top:-6px">' + desc + '</div>' : '') +
+      (paths.length > 8 ? '<div class="tp-search"><input type="search" id="ptQ" placeholder="找分類…" aria-label="找分類" autocomplete="off"></div>' : '') +
+      '<div class="pk-list" id="ptList"></div><button type="button" class="btn line" data-sh="close">取消</button>', {}, () => finish(''));
+    const draw = () => {
+      const q = ($('#ptQ') ? $('#ptQ').value : '').trim().toLowerCase();
+      const L = paths.filter(p => !q || tagHit(p, q));
+      $('#ptList').innerHTML = L.length ? L.map(p => '<button type="button" class="pk-row" data-pt="' + esc(p) + '"' + (p.indexOf(SEP) >= 0 ? ' style="font-weight:500;padding-left:30px"' : '') + '><span>' + esc(p) + '</span></button>').join('') : '<div class="small">找不到</div>';
+    };
+    draw();
+    if ($('#ptQ')) $('#ptQ').addEventListener('input', draw);
+    $('#ptList').addEventListener('click', e => { const b = e.target.closest('[data-pt]'); if (b) { finish(b.dataset.pt); closeSheet(); } });
+  });
+}
+function mainMenu(A) {
+  const T = tagsTree(), t = findT(T, A);
+  if (!t) return;
+  const n = countUsing(p => inMain(p, A));
+  const others = T.length > 1;
+  actionSheet(A, (t.c.length ? '底下有 ' + t.c.length + ' 個次分類，' : '') + (n ? n + ' 則收藏用到' : '目前沒有收藏用到'), [
+    { label: '改名', fn: () => renameMain(A) },
+    others && { label: '移到其他主分類底下（變成次分類）', fn: () => demoteMain(A) },
+    others && { label: '合併到另一個主分類', fn: () => mergeMain(A) },
+    { label: '刪除', danger: true, fn: () => deleteMain(A) }
+  ]);
+}
+function kidMenu(A, c) {
+  const path = A + SEP + c, n = countUsing(p => p === path);
+  actionSheet(path, n ? n + ' 則收藏用到' : '目前沒有收藏用到', [
+    { label: '改名', fn: () => renameKid(A, c) },
+    { label: '升成主分類', fn: () => promoteKid(A, c) },
+    tagsTree().length > 1 && { label: '移到另一個主分類底下', fn: () => moveKid(A, c) },
+    { label: '合併到其他分類', fn: () => mergeKid(A, c) },
+    { label: '刪除', danger: true, fn: () => deleteKid(A, c) }
+  ]);
+}
+async function renameMain(A) {
+  const v = await askText('「' + A + '」改名', A);
+  if (!v || v === A) return;
+  if (findT(tagsTree(), v)) { toast('已經有「' + v + '」了，要合在一起請用「合併到另一個主分類」', [], 5000); return; }
+  tagOp('「' + A + '」改名為「' + v + '」', tree => { findT(tree, A).n = v; },
+    p => p === A ? v : (p.indexOf(A + SEP) === 0 ? v + p.slice(A.length) : p));
+}
+/** 分類只有兩層：有次分類的主分類移到別人底下時，問你要「甲：通通併成一個」還是「乙：次分類一起搬過去」 */
+function askSplit(A, B, kids) {
+  return new Promise(res => {
+    let done = false;
+    const finish = v => { if (done) return; done = true; res(v); closeSheet(); };
+    const ks = kids.slice(0, 3).map(k => '「' + k + '」').join('') + (kids.length > 3 ? '等 ' + kids.length + ' 個' : '');
+    const ex = kids.slice(0, 2).map(k => '「' + B + SEP + k + '」').join('');
+    sheet('<h3>「' + esc(A) + '」底下還有次分類</h3>' +
+      '<div class="small" style="margin-top:-6px">分類只有兩層。移到「' + esc(B) + '」底下時，' + esc(ks) + '要怎麼辦？</div>' +
+      '<div class="split">' +
+        '<button type="button" class="opt" data-sh="m"><b>甲：通通變成「' + esc(B + SEP + A) + '」</b><span>細分不留，「' + esc(A) + '」和它底下的收藏都放進同一格</span></button>' +
+        '<button type="button" class="opt" data-sh="k"><b>乙：次分類直接搬到「' + esc(B) + '」底下</b><span>變成' + esc(ex) + (kids.length > 2 ? '…' : '') + '；只標「' + esc(A) + '」的收藏變成「' + esc(B + SEP + A) + '」</span></button>' +
+      '</div><button type="button" class="btn line" data-sh="close">取消</button>',
+      { m: () => finish('m'), k: () => finish('k') }, () => { if (!done) { done = true; res(''); } });
+  });
+}
+async function demoteMain(A) {
+  const B = await pickTarget('把「' + A + '」移到哪個主分類底下？', '移過去後「' + A + '」會變成次分類', tagsTree().map(t => t.n).filter(n => n !== A));
+  if (!B) return;
+  const t = findT(tagsTree(), A);
+  let mode = 'm';
+  if (t.c.length) { mode = await askSplit(A, B, t.c); if (!mode) return; }
+  const usedPlain = live().some(it => (it.tags || []).indexOf(A) >= 0);
+  tagOp('「' + A + '」移到「' + B + '」底下', tree => {
+    const src = findT(tree, A), dst = findT(tree, B);
+    tree.splice(tree.indexOf(src), 1);
+    if (mode === 'm') addKid(dst, A);
+    else { src.c.forEach(c => addKid(dst, c)); if (usedPlain) addKid(dst, A); }
+  }, p => {
+    if (!inMain(p, A)) return p;
+    if (mode === 'm' || p === A) return B + SEP + A;
+    return B + SEP + p.slice(A.length + 1);
+  });
+}
+async function mergeMain(A) {
+  const B = await pickTarget('把「' + A + '」合併到哪個主分類？', '「' + A + '」的收藏和次分類都會搬過去，「' + A + '」這個名字就不留了', tagsTree().map(t => t.n).filter(n => n !== A));
+  if (!B) return;
+  tagOp('「' + A + '」合併到「' + B + '」', tree => {
+    const src = findT(tree, A), dst = findT(tree, B);
+    tree.splice(tree.indexOf(src), 1);
+    src.c.forEach(c => addKid(dst, c));
+  }, p => p === A ? B : (p.indexOf(A + SEP) === 0 ? B + p.slice(A.length) : p));
+}
+async function deleteMain(A) {
+  const n = countUsing(p => inMain(p, A));
+  const ok = await askConfirm('刪除「' + A + '」？', n ? '有 ' + n + ' 則收藏用到它（含次分類），會一起拿掉這個標籤；沒有其他標籤的會回到「待整理」。' : '目前沒有收藏用到它。', '刪除', true);
+  if (!ok) return;
+  tagOp('刪掉「' + A + '」', tree => { tree.splice(tree.indexOf(findT(tree, A)), 1); }, p => inMain(p, A) ? '' : p);
+}
+async function renameKid(A, c) {
+  const v = await askText('「' + c + '」改名', c);
+  if (!v || v === c) return;
+  if (findT(tagsTree(), A).c.indexOf(v) >= 0) { toast('「' + A + '」底下已經有「' + v + '」了，要合在一起請用「合併到其他分類」', [], 5000); return; }
+  const o = A + SEP + c, nw = A + SEP + v;
+  tagOp('「' + c + '」改名為「' + v + '」', tree => { const t = findT(tree, A); t.c[t.c.indexOf(c)] = v; }, p => p === o ? nw : p);
+}
+function promoteKid(A, c) {
+  const o = A + SEP + c, exists = !!findT(tagsTree(), c);
+  tagOp(exists ? '「' + o + '」併進主分類「' + c + '」' : '「' + c + '」升成主分類', tree => {
+    const t = findT(tree, A);
+    t.c.splice(t.c.indexOf(c), 1);
+    if (!exists) tree.splice(tree.indexOf(t) + 1, 0, { n: c, c: [] });
+  }, p => p === o ? c : p);
+}
+async function moveKid(A, c) {
+  const B = await pickTarget('把「' + c + '」移到哪個主分類底下？', '', tagsTree().map(t => t.n).filter(n => n !== A));
+  if (!B) return;
+  const o = A + SEP + c;
+  tagOp('「' + c + '」移到「' + B + '」底下', tree => {
+    const t = findT(tree, A); t.c.splice(t.c.indexOf(c), 1);
+    addKid(findT(tree, B), c);
+  }, p => p === o ? B + SEP + c : p);
+}
+async function mergeKid(A, c) {
+  const o = A + SEP + c;
+  const to = await pickTarget('把「' + o + '」合併到哪個分類？', '收藏會搬過去，「' + c + '」這個次分類就不留了', allPaths().filter(p => p !== o));
+  if (!to) return;
+  tagOp('「' + o + '」合併到「' + to + '」', tree => { const t = findT(tree, A); t.c.splice(t.c.indexOf(c), 1); }, p => p === o ? to : p);
+}
+async function deleteKid(A, c) {
+  const o = A + SEP + c, n = countUsing(p => p === o);
+  const ok = await askConfirm('刪除「' + c + '」？', n ? '有 ' + n + ' 則收藏用到它，會改成只放在「' + esc(A) + '」。' : '目前沒有收藏用到它。', '刪除', true);
+  if (!ok) return;
+  tagOp('刪掉「' + o + '」', tree => { const t = findT(tree, A); t.c.splice(t.c.indexOf(c), 1); }, p => p === o ? A : p);
 }
 
 /* ================= 面板與提示 ================= */
 let SHEET = null;
-function sheet(html, handlers, onClose) {
+function sheet(html, handlers, onClose, cls) {
   const wasOpen = !!SHEET;
   closeSheet(true);
   const root = $('#sheetRoot');
-  root.innerHTML = '<div class="scrim"><div class="sheet" role="dialog" aria-modal="true">' + html + '</div></div>';
+  root.innerHTML = '<div class="scrim"><div class="sheet' + (cls ? ' ' + cls : '') + '" role="dialog" aria-modal="true">' + html + '</div></div>';
   SHEET = { handlers: handlers || {}, onClose: onClose, prevFocus: document.activeElement };
   const scrim = $('.scrim', root);
   scrim.addEventListener('click', e => {
@@ -1479,6 +2024,7 @@ function closeSheet(replacing) {
   if (!SHEET) return;
   const s = SHEET;
   SHEET = null;
+  PICK = null;
   $('#sheetRoot').innerHTML = '';
   if (s.onClose) s.onClose();
   if (!replacing && history.state && history.state.sheet) { ignorePop++; history.back(); }
@@ -1489,7 +2035,7 @@ function closeSheet(replacing) {
 window.addEventListener('popstate', () => {
   if (ignorePop > 0) { ignorePop--; return; }
   if (SHEET) {
-    const s = SHEET; SHEET = null; $('#sheetRoot').innerHTML = ''; if (s.onClose) s.onClose();
+    const s = SHEET; SHEET = null; PICK = null; $('#sheetRoot').innerHTML = ''; if (s.onClose) s.onClose();
     if (popupArmed) setTimeout(popupFinish, 30);
   }
 });
@@ -1681,7 +2227,7 @@ function metaDone(id, got) {
   }
 }
 
-/* ---------- 次分類拖曳排序（只有按住 ⠿ 才拖，其他地方照常捲動） ---------- */
+/* ---------- 拖曳排序：主分類、次分類共用（只有按住 ⠿ 才拖，其他地方照常捲動） ---------- */
 let KD = null;
 function kidDragEnd(e) {
   if (!KD || e.pointerId !== KD.pid) return;
@@ -1689,15 +2235,19 @@ function kidDragEnd(e) {
   d.row.classList.remove('dragging');
   const order = $$('.sk-row', d.list).map(r => r.dataset.c);
   const tree = JSON.parse(JSON.stringify(tagsTree()));
-  const t = tree[Number(d.list.dataset.i)];
-  if (t && JSON.stringify(order) !== JSON.stringify(t.c) && order.length === t.c.length) {
-    t.c = order;
-    setTags(tree);
-    try { if (navigator.vibrate) navigator.vibrate(15); } catch (err) { /* 略過 */ }
+  let moved = false;
+  if (d.list.dataset.kind === 'main') {
+    const next = order.map(n => findT(tree, n)).filter(Boolean);
+    if (next.length === tree.length && JSON.stringify(order) !== JSON.stringify(tree.map(t => t.n))) { setTags(next); moved = true; }
+  } else {
+    const t = tree[Number(d.list.dataset.i)];
+    if (t && JSON.stringify(order) !== JSON.stringify(t.c) && order.length === t.c.length) { t.c = order; setTags(tree); moved = true; }
   }
-  renderSettings();
+  if (moved) try { if (navigator.vibrate) navigator.vibrate(15); } catch (err) { /* 略過 */ }
+  if (PICK && PICK.sorting) pickerRender(PICK);
+  if (S.screen === 'settings') renderSettings();
 }
-$('#setPanel').addEventListener('pointerdown', e => {
+document.addEventListener('pointerdown', e => {
   const g = e.target.closest('.sk-grip');
   if (!g) return;
   e.preventDefault();
@@ -1706,7 +2256,7 @@ $('#setPanel').addEventListener('pointerdown', e => {
   try { g.setPointerCapture(e.pointerId); } catch (err) { /* 略過 */ }
   row.classList.add('dragging');
 });
-$('#setPanel').addEventListener('pointermove', e => {
+document.addEventListener('pointermove', e => {
   if (!KD || e.pointerId !== KD.pid) return;
   const rows = $$('.sk-row', KD.list), idx = rows.indexOf(KD.row);
   let to = idx;
@@ -1719,8 +2269,8 @@ $('#setPanel').addEventListener('pointermove', e => {
   if (to < idx) KD.list.insertBefore(KD.row, rows[to]);
   else if (to > idx) rows[to].after(KD.row);
 });
-$('#setPanel').addEventListener('pointerup', kidDragEnd);
-$('#setPanel').addEventListener('pointercancel', kidDragEnd);
+document.addEventListener('pointerup', kidDragEnd);
+document.addEventListener('pointercancel', kidDragEnd);
 
 /* ================= 全域事件 ================= */
 $$('.tabbar button').forEach(b => b.addEventListener('click', () => go(b.dataset.go)));
@@ -1731,6 +2281,8 @@ $('#snackOld').addEventListener('click', () => { S.snack.old = !S.snack.old; S.s
 
 document.addEventListener('click', async e => {
   const t = e.target;
+  // 面板裡的按鈕按下後畫面可能已經重畫，被換掉的舊按鈕不要再處理一次
+  if (!t.isConnected) return;
   let b;
   if ((b = t.closest('[data-gl1]'))) { S.gran.l1 = b.dataset.gl1; S.gran.l2 = ''; S.gran.limit = 60; renderGranary(); return; }
   if ((b = t.closest('[data-gl2]'))) { S.gran.l2 = b.dataset.gl2; S.gran.limit = 60; renderGranary(); return; }
@@ -1745,6 +2297,14 @@ document.addEventListener('click', async e => {
     return;
   }
   if ((b = t.closest('[data-tg]')) && !t.closest('.sheet')) { tagAction(b.dataset.tg, Number(b.dataset.i), Number(b.dataset.j)); return; }
+  if ((b = t.closest('[data-ms]')) && !t.closest('.sheet')) {
+    moveMain(Number(b.dataset.i), b.dataset.ms);
+    renderSettings();
+    const k = Number(b.dataset.i) + (b.dataset.ms === 'up' ? -1 : 1);
+    const nb = $('#setPanel [data-ms="' + b.dataset.ms + '"][data-i="' + k + '"]');
+    if (nb && !nb.disabled) nb.focus();
+    return;
+  }
   b = t.closest('[data-act]');
   if (!b || t.closest('.sheet')) return;
   const act = b.dataset.act;
@@ -1755,6 +2315,27 @@ document.addEventListener('click', async e => {
   else if (act === 'nudgeGo') { NUDGE = 0; Object.assign(S.snack, { l1: '', todo: true, old: true, cur: '' }); go('snack'); }
   else if (act === 'nudgeX') { NUDGE = 0; render(); }
   else if (act === 'more') { S.gran.limit += 60; renderGranary(); }
+  else if (act === 'pickL1') openL1Picker(b.dataset.for);
+  else if (act === 'pickOn') pickMode(true);
+  else if (act === 'pickOff') pickMode(false);
+  else if (act === 'pickAll') {
+    const list = granFiltered();
+    if (list.every(x => S.picked.has(x.id))) S.picked.clear(); else list.forEach(x => S.picked.add(x.id));
+    if (list.length > S.gran.limit && S.picked.size) S.gran.limit = list.length;
+    renderGranary();
+  }
+  else if (act === 'bMove') openBatchTags('move');
+  else if (act === 'bAdd') openBatchTags('add');
+  else if (act === 'bSeen') {
+    const ids = [...S.picked];
+    if (ids.every(id => byId(id) && byId(id).seen)) bulkPatch(ids, it => it.seen ? { seen: false, seenAt: 0 } : null, '{n} 則改成還沒看');
+    else bulkPatch(ids, it => it.seen ? null : { seen: true, seenAt: now() }, '{n} 則標成看過');
+  }
+  else if (act === 'bDel') {
+    const ids = [...S.picked];
+    const ok = await askConfirm('刪除 ' + ids.length + ' 則？', '刪掉後 8 秒內可以按「復原」救回來。', '刪除', true);
+    if (ok) bulkPatch(ids, () => ({ deleted: true }), '刪掉 {n} 則');
+  }
   else if (act === 'reroll') { snackPick(true); renderSnack(); }
   else if (act === 'eat') openLink(b.dataset.id);
   else if (act === 'changelog') openChangelog();
