@@ -1,21 +1,17 @@
 <!doctype html>
 <!--
   囤囤の森 — 隨手收藏網路上的影片、文章、貼文
-  版本：v1.6.0（2026-11-23）
+  版本：v1.8.2（2026-11-23）
 
   更新紀錄（最近三版，完整紀錄見規格檔）
-  v1.6.0（2026-11-23）
-    【新增】嗑一顆多一顆「挑有寫心得的」開關
-    【調整】「放最久的優先」改成全部都抽得到、放越久越容易抽中（原本只在最舊的 3 則裡挑）
-    【調整】分類選單每列可選 1～4 個主分類，預設 3 個；雲端同步清空網址時，通行碼也一起從這台裝置清掉
-  v1.5.0（2026-11-23）
-    【新增】糧倉多一顆「有心得」篩選（可和全部／還沒看／看過一起用）；嗑一顆顯示完整心得，可直接寫或改心得
-    【新增】設定可選分類選單每列放 1～3 個主分類（預設 2 個），四個選分類的地方都套用
-    【調整】嗑一顆改成左右滑換一顆、點縮圖或標題打開；整理面板的網址可以點開；拿掉待整理、糧倉的操作提示文字
-  v1.4.0（2026-11-22）
-    【新增】糧倉可一次選很多則：移到分類、加上分類、標成看過、刪除；設定頁分類可搬到別的主分類底下、升成主分類、合併
-    【新增】主分類可拖曳排序（設定頁、整理面板都能進）；整理面板可搜尋分類，主分類會收合
-    【調整】分享卡不再倒數；整理面板上下固定、中間捲動；心得框變大、沒看過也能寫，糧倉點心得看全文
+  v1.8.2（2026-11-23）
+    【調整】搜尋時心得不再自動展開，一律 2 行；關鍵字在後面時，預覽從那一行開始顯示，前面加「…」
+  v1.8.1（2026-11-23）
+    【調整】搜尋的字在心得 2 行以外時，那則心得自動展開，直接看到標黃的字；拿掉「心得有提到」小標
+  v1.8.0（2026-11-23）
+    【新增】糧倉搜尋：顯示「找到 N 則」、符合的字標黃、只在心得裡找到的加「心得有提到」
+    【新增】找不到時直接給按鈕：清除搜尋／篩選改回全部／關掉有心得
+    【調整】糧倉搜尋時鍵盤右下角變「搜尋」，按了收起鍵盤
 -->
 <html lang="zh-Hant">
 <head>
@@ -23,7 +19,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, interactive-widget=resizes-content">
 <meta name="theme-color" content="#23314F">
 <meta name="description" content="隨手收藏網路上的影片、文章、貼文">
-<title>囤囤の森 v1.6.0</title>
+<title>囤囤の森 v1.8.2</title>
 <link rel="manifest" href="manifest.webmanifest">
 <link rel="icon" href="icon-192.png">
 <link rel="apple-touch-icon" href="icon-192.png">
@@ -110,7 +106,7 @@ button{cursor:pointer}
 /* 糧倉 */
 .search{margin:12px 20px 0;position:relative}
 .search svg{position:absolute;left:14px;top:13px}
-.search input{width:100%;min-height:44px;border:none;border-radius:22px;padding:0 16px 0 40px;font-size:15px;background:#FAF8F2;color:#23314F}
+.search input{width:100%;min-height:44px;border:none;border-radius:22px;padding:0 44px 0 40px;font-size:15px;background:#FAF8F2;color:#23314F}
 .chip-row{display:flex;overflow-x:auto;gap:8px;padding:12px 20px 2px;scrollbar-width:none}
 .chip-row::-webkit-scrollbar{display:none}
 .chip-top{flex:none;min-height:40px;padding:0 14px;border-radius:20px;border:2px solid var(--night2);background:transparent;color:var(--top-ink);font-size:14px;font-weight:900;display:flex;align-items:center;gap:6px}
@@ -264,8 +260,11 @@ input[type=search]::-webkit-search-cancel-button{-webkit-appearance:none;display
 /* 分類挑選器 */
 .tp-top{display:flex;gap:8px;align-items:center}
 .tp-search{flex:1;position:relative}
-.tp-search input{width:100%;min-height:42px;border:2px solid var(--line2);border-radius:21px;padding:0 36px 0 14px;font-size:15px;background:var(--card);color:var(--ink)}
-.tp-search button{position:absolute;right:4px;top:4px;width:34px;height:34px;border:none;border-radius:17px;background:transparent;color:var(--muted)}
+.tp-search input{width:100%;min-height:42px;border:2px solid var(--line2);border-radius:21px;padding:0 42px 0 14px;font-size:15px;background:var(--card);color:var(--ink)}
+.tp-search button{position:absolute;right:2px;top:2px;width:38px;height:38px;border:none;border-radius:19px;background:transparent;color:var(--muted);font-size:15px}
+.search .q-clear{position:absolute;right:2px;top:2px;width:40px;height:40px;border:none;border-radius:20px;background:transparent;color:#7A8399;font-size:15px}
+.q-clear:active,.tp-clear:active{background:var(--line)}
+.search .q-clear:active{background:#EFE9DA}
 .tp-sec{display:flex;flex-direction:column;gap:6px}
 .tp-wrap{display:flex;flex-wrap:wrap;gap:8px;align-items:flex-start}
 .tp-g{display:inline-flex;align-items:stretch;border:2px solid var(--line2);border-radius:22px;background:var(--card);overflow:hidden;min-height:44px}
@@ -298,6 +297,12 @@ body.selmode .tabbar{display:none}
 body:has(#granQ:focus) .tabbar{visibility:hidden}
 /* 心得全文 */
 .note-line{white-space:pre-wrap;word-break:break-word}
+/* 糧倉搜尋（v1.8.0） */
+mark.q-hit{background:var(--grain3);color:#23314F;border-radius:3px;padding:0 1px}
+.gran-count{font-size:13px;color:var(--muted);padding:0 20px 8px}
+.gran-count b{color:var(--ink);font-family:'Baloo 2',sans-serif;font-size:15px}
+.empty-acts{display:flex;flex-wrap:wrap;gap:8px;justify-content:center;margin-top:14px}
+.empty-acts .btn{min-height:44px;padding:0 16px;width:auto}
 .note-line.open{display:block;-webkit-line-clamp:unset;overflow:visible}
 .note-more{font-size:12px;color:var(--leaf);font-weight:900;align-self:flex-start}
 /* 糧倉／分類選單 */
@@ -386,7 +391,7 @@ body:has(#granQ:focus) .tabbar{visibility:hidden}
     </div>
     <div class="search">
       <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#7A8399" stroke-width="2.2" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="M20 20l-4-4"/></svg>
-      <input id="granQ" type="search" placeholder="搜尋標題、心得、標籤" aria-label="搜尋糧倉" autocomplete="off">
+      <input id="granQ" type="search" placeholder="搜尋標題、心得、標籤" aria-label="搜尋糧倉" enterkeyhint="search" autocomplete="off">
     </div>
     <div class="chip-row" id="granL1"></div>
     <div class="panel" style="margin-top:12px">
@@ -402,6 +407,7 @@ body:has(#granQ:focus) .tabbar{visibility:hidden}
       </div>
       <div class="hint hide" style="padding-top:0" id="granHint"></div>
       <div id="granSel"></div>
+      <div class="gran-count hide" id="granCount" aria-live="polite"></div>
       <div id="granList"></div>
     </div>
   </section>
@@ -442,8 +448,24 @@ body:has(#granQ:focus) .tabbar{visibility:hidden}
 
 <script>
 'use strict';
-const APP_VERSION = '1.6.0';
+const APP_VERSION = '1.8.2';
 const CHANGELOG = [
+  { v: '1.8.2', d: '2026-11-23', lines: [
+    '【調整】搜尋時心得不再自動展開，每則一樣 2 行；關鍵字在後面時，預覽從那一行開始顯示（前面加「…」），標黃的字一定看得到'
+  ] },
+  { v: '1.8.1', d: '2026-11-23', lines: [
+    '【調整】搜尋的字在心得 2 行以外時，那則心得自動展開，直接看到標黃的字',
+    '【調整】拿掉「心得有提到」小標'
+  ] },
+  { v: '1.8.0', d: '2026-11-23', lines: [
+    '【新增】糧倉搜尋時顯示「找到 N 則」，符合的字標黃；只在心得裡找到的會標「心得有提到」',
+    '【新增】找不到時直接給按鈕：清除搜尋、篩選改回全部、關掉有心得',
+    '【調整】糧倉搜尋時鍵盤右下角變「搜尋」，按了收起鍵盤，方便滑結果'
+  ] },
+  { v: '1.7.0', d: '2026-11-23', lines: [
+    '【新增】搜尋框右邊有字時出現 ✕，點了一鍵清空（糧倉、選糧倉、整理面板、挑分類都有）',
+    '【調整】按 ✕ 不會收起鍵盤，想重打直接打；鍵盤已收起時按 ✕ 也不會跳出鍵盤'
+  ] },
   { v: '1.6.0', d: '2026-11-23', lines: [
     '【新增】嗑一顆多一顆「挑有寫心得的」開關',
     '【調整】「放最久的優先」改成全部都抽得到、放越久越容易抽中（原本只在最舊的 3 則裡挑）',
@@ -482,6 +504,22 @@ const CHANGELOG = [
 
 /* ================= 小工具 ================= */
 const $ = (s, el = document) => el.querySelector(s);
+/** 搜尋框右邊的 ✕：有字才出現，點了清空並觸發 input 事件。
+ *  按下時擋掉預設動作，焦點留在輸入框：正在打字就繼續打，鍵盤已收起也不會跳出來 */
+function addClear(input) {
+  if (!input || input._clr) return;
+  const b = document.createElement('button');
+  b.type = 'button'; b.className = 'q-clear hide'; b.setAttribute('aria-label', '清除搜尋'); b.textContent = '✕';
+  input.insertAdjacentElement('afterend', b);
+  input._clr = b;
+  const sync = () => b.classList.toggle('hide', !input.value);
+  input.addEventListener('input', sync);
+  b.addEventListener('pointerdown', e => e.preventDefault());
+  b.addEventListener('mousedown', e => e.preventDefault());
+  b.addEventListener('click', () => { input.value = ''; input.dispatchEvent(new Event('input', { bubbles: true })); });
+  sync();
+}
+const syncClear = input => { if (input && input._clr) input._clr.classList.toggle('hide', !input.value); };
 const $$ = (s, el = document) => [...el.querySelectorAll(s)];
 const esc = s => String(s == null ? '' : s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 const now = () => Date.now();
@@ -682,9 +720,10 @@ function renderBadge() {
 function rowHtml(it, mode) {
   const p = platOf(it.url);
   const label = it.title || '（沒抓到標題，右滑補一句）';
+  const words = mode === 'gran' ? granWords() : [];
   const tags = mode === 'gran' ? (it.tags || []).map(t => '<span class="tag">' + esc(t) + '</span>').join('') : '';
   const nOpen = NOTE_OPEN.has(it.id);
-  const note = mode === 'gran' && it.note ? '<div class="note-line' + (nOpen ? ' open' : '') + '">' + esc(it.note) + '</div><span class="note-more' + (nOpen ? '' : ' hide') + '">' + (nOpen ? '收起' : '展開全文') + '</span>' : '';
+  const note = mode === 'gran' && it.note ? '<div class="note-line' + (nOpen ? ' open' : '') + '">' + hlText(it.note, words) + '</div><span class="note-more' + (nOpen ? '' : ' hide') + '">' + (nOpen ? '收起' : '展開全文') + '</span>' : '';
   const pk = mode === 'gran' && S.pick;
   const picked = pk && S.picked.has(it.id);
   const lText = mode === 'gran' && it.seen ? '改成還沒看' : '看過';
@@ -695,7 +734,7 @@ function rowHtml(it, mode) {
     '<div class="row-fg" data-id="' + esc(it.id) + '"' + (pk ? ' role="checkbox" aria-checked="' + !!picked + '" tabindex="0"' : '') + '>' +
       '<span class="pick" aria-hidden="true">' + (picked ? ICON.tick : '') + '</span>' +
       '<div class="thumb">' + (it.thumb ? '<img src="' + esc(it.thumb) + '" alt="" loading="lazy" referrerpolicy="no-referrer" onerror="this.remove()">' : '') + '<span class="src">' + esc(it.src || p.code) + '</span></div>' +
-      '<div class="row-txt"><div class="row-title' + (it.title ? '' : ' empty') + '">' + esc(label) + '</div>' + note +
+      '<div class="row-txt"><div class="row-title' + (it.title ? '' : ' empty') + '">' + (it.title ? hlText(label, words) : esc(label)) + '</div>' + note +
         '<div class="row-meta">' + tags + '<span>' + esc(p.name) + '　' + esc(fmtWhen(it.savedAt)) + '</span></div></div>' +
       (it.seen ? '<span class="badge-seen">看過</span>' : '') +
       '<button class="more" type="button" data-act="org" data-id="' + esc(it.id) + '" aria-label="整理這一則">' + ICON.more + '</button>' +
@@ -828,6 +867,28 @@ function nudgeHtml() {
 
 /* ---------- 糧倉 ---------- */
 function inL1(it, l1) { return (it.tags || []).some(t => t === l1 || t.indexOf(l1 + SEP) === 0); }
+/** 糧倉搜尋的關鍵字（空白分開，小寫） */
+const granWords = () => S.gran.q.trim().toLowerCase().split(/\s+/).filter(Boolean);
+/** 把文字中符合關鍵字的部分包上 <mark>（先切再跳脫，不會破壞 HTML） */
+function hlText(text, words) {
+  text = String(text == null ? '' : text);
+  if (!words.length) return esc(text);
+  const re = new RegExp('(' + words.map(w => w.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')).join('|') + ')', 'gi');
+  return text.split(re).map((part, i) => i % 2 ? '<mark class="q-hit">' + esc(part) + '</mark>' : esc(part)).join('');
+}
+/** 糧倉心得：平常顯示全文（CSS 只露 2 行）；snip＝從第一個關鍵字那一行開始顯示，前面加「…」 */
+function noteHtml(it, words, snip) {
+  const text = String(it.note || '');
+  if (!snip || !words.length) return { html: hlText(text, words), cut: false };
+  const low = text.toLowerCase();
+  let pos = -1;
+  words.forEach(w => { const i = low.indexOf(w); if (i >= 0 && (pos < 0 || i < pos)) pos = i; });
+  if (pos <= 0) return { html: hlText(text, words), cut: false };
+  let start = text.lastIndexOf('\n', pos - 1) + 1;   // 那一行的開頭
+  if (pos - start > 24) start = pos - 10;             // 同一行太長：從關鍵字前 10 個字開始
+  if (start <= 0) return { html: hlText(text, words), cut: false };
+  return { html: '…' + hlText(text.slice(start), words), cut: true };
+}
 function granFiltered() {
   const g = S.gran, q = g.q.trim().toLowerCase();
   const list = live().filter(it => {
@@ -850,7 +911,7 @@ function renderGranary() {
   const g = S.gran, all = live(), T = tagsTree();
   $('#granTop').innerHTML = nudgeHtml();
   $('#granTotal').textContent = all.length;
-  if ($('#granQ').value !== g.q) $('#granQ').value = g.q;
+  if ($('#granQ').value !== g.q) { $('#granQ').value = g.q; syncClear($('#granQ')); }
   if (g.l1 && g.l1 !== '__none' && !T.some(t => t.n === g.l1)) { g.l1 = ''; g.l2 = ''; }
   // 主分類多了橫排會很長：只留「全部」「未分類」「目前選的」，其他從「分類 ▾」挑
   const cur = g.l1 && g.l1 !== '__none';
@@ -884,8 +945,17 @@ function renderGranary() {
       '<button type="button" class="btn line" style="min-height:38px;padding:0 14px" data-act="pickOff">結束選取</button></div>'
     : '';
   renderSelActs();
+  const hasQ = !!g.q.trim(), hasF = !!g.l1 || g.status !== 'all';
+  const cnt = $('#granCount');
+  cnt.classList.toggle('hide', S.pick || !list.length || !(hasQ || hasF || g.note));
+  cnt.innerHTML = '找到 <b>' + list.length + '</b> 則';
   if (!list.length) {
-    $('#granList').innerHTML = '<div class="empty-box">' + (all.length ? '找不到符合的。<br>換個關鍵字，或把篩選改回「全部」' + (g.note ? '、關掉「有心得」' : '') + '。' : '糧倉還是空的。<br>先到「待整理」存幾則吧。') + '</div>';
+    $('#granList').innerHTML = '<div class="empty-box">' + (all.length
+      ? '找不到符合的' + (hasQ ? '「' + esc(g.q.trim()) + '」' : '') + '。<div class="empty-acts">' +
+        (hasQ ? '<button type="button" class="btn line" data-act="gClearQ">清除搜尋</button>' : '') +
+        (hasF ? '<button type="button" class="btn line" data-act="gResetF">篩選改回全部</button>' : '') +
+        (g.note ? '<button type="button" class="btn line" data-act="gNoteOff">關掉有心得</button>' : '') + '</div>'
+      : '糧倉還是空的。<br>先到「待整理」存幾則吧。') + '</div>';
     return;
   }
   const shown = list.slice(0, g.limit);
@@ -896,17 +966,27 @@ function renderGranary() {
 /** 心得超過兩行的，下面出現「展開全文」 */
 function markLongNotes() {
   requestAnimationFrame(() => {
+    const words = granWords();
     $$('#granList .note-line:not(.open)').forEach(el => {
       const more = el.nextElementSibling;
-      if (more && more.classList.contains('note-more')) more.classList.toggle('hide', el.scrollHeight <= el.clientHeight + 2);
+      // 搜尋的第一個字被藏在 2 行以外時，改成從那一行開始顯示（每則一樣 2 行，標黃的字一定看得到）
+      const first = $('mark.q-hit', el), row = el.closest('.row');
+      if (first && row && !el.dataset.cut && first.getBoundingClientRect().bottom > el.getBoundingClientRect().bottom + 1) {
+        const it = byId(row.dataset.id), nh = it && noteHtml(it, words, true);
+        if (nh && nh.cut) { el.innerHTML = nh.html; el.dataset.cut = '1'; }
+      }
+      // 前面被略過（data-cut）的一定有「展開全文」；其他超過 2 行才出現
+      if (more && more.classList.contains('note-more')) more.classList.toggle('hide', !el.dataset.cut && el.scrollHeight <= el.clientHeight + 2);
     });
   });
 }
 function toggleNote(row) {
   const id = row.dataset.id, el = $('.note-line', row), more = $('.note-more', row);
   if (!el) return;
-  const open = !NOTE_OPEN.has(id);
+  const open = !el.classList.contains('open');
   if (open) NOTE_OPEN.add(id); else NOTE_OPEN.delete(id);
+  const it = byId(id);
+  if (it) { el.innerHTML = hlText(it.note, granWords()); delete el.dataset.cut; }   // 先換回全文；收起時由 markLongNotes 再判斷要不要從關鍵字那行開始
   el.classList.toggle('open', open);
   if (more) { more.textContent = open ? '收起' : '展開全文'; more.classList.toggle('hide', !open && el.scrollHeight <= el.clientHeight + 2); }
   if (!open) markLongNotes();
@@ -1028,7 +1108,7 @@ function openL1Picker(forWhat) {
     $('#pkList').innerHTML = html || '<div class="small" style="grid-column:1/-1">找不到「' + esc(q) + '」</div>';
   };
   draw();
-  if ($('#pkQ')) $('#pkQ').addEventListener('input', draw);
+  if ($('#pkQ')) { addClear($('#pkQ')); $('#pkQ').addEventListener('input', draw); }
   $('#pkList').addEventListener('click', e => {
     const b = e.target.closest('[data-pk]');
     if (!b) return;
@@ -1430,6 +1510,8 @@ function makePicker(host, opts) {
     if (e.key === 'Enter') { e.preventDefault(); qIn.blur(); }
   });
   const setQ = v => { P.q = v; qIn.value = v; $('.tp-clear', host).classList.toggle('hide', !v); pickerRender(P); };
+  // 按 ✕ 時焦點留在輸入框，不收起也不跳出鍵盤
+  ['pointerdown', 'mousedown'].forEach(ev => $('.tp-clear', host).addEventListener(ev, e => e.preventDefault()));
   const changed = () => { pickerRender(P); if (opts.onChange) opts.onChange(P.sel); };
   const kidAdd = l1 => {
     const k = $('.kid-in', host);
@@ -1448,7 +1530,7 @@ function makePicker(host, opts) {
   host.addEventListener('click', e => {
     const t = e.target;
     let b;
-    if (t.closest('.tp-clear')) { setQ(''); qIn.focus(); return; }
+    if (t.closest('.tp-clear')) { setQ(''); return; }
     if ((b = t.closest('[data-tp]'))) {
       const a = b.dataset.tp;
       if (a === 'sort') { P.sorting = true; pickerRender(P); if (opts.onSort) opts.onSort(true); }
@@ -1997,7 +2079,7 @@ function pickTarget(title, desc, paths) {
       $('#ptList').innerHTML = L.length ? L.map(p => '<button type="button" class="pk-row" data-pt="' + esc(p) + '"' + (p.indexOf(SEP) >= 0 ? ' style="font-weight:500;padding-left:30px"' : '') + '><span>' + esc(p) + '</span></button>').join('') : '<div class="small">找不到</div>';
     };
     draw();
-    if ($('#ptQ')) $('#ptQ').addEventListener('input', draw);
+    if ($('#ptQ')) { addClear($('#ptQ')); $('#ptQ').addEventListener('input', draw); }
     $('#ptList').addEventListener('click', e => { const b = e.target.closest('[data-pt]'); if (b) { finish(b.dataset.pt); closeSheet(); } });
   });
 }
@@ -2392,6 +2474,8 @@ document.addEventListener('pointercancel', kidDragEnd);
 /* ================= 全域事件 ================= */
 $$('.tabbar button').forEach(b => b.addEventListener('click', () => go(b.dataset.go)));
 $('#syncBtn').addEventListener('click', () => go('settings'));
+addClear($('#granQ'));
+$('#granQ').addEventListener('keydown', e => { if (e.key === 'Enter') { e.preventDefault(); e.target.blur(); } });
 $('#granQ').addEventListener('input', e => { S.gran.q = e.target.value; S.gran.limit = 60; renderGranary(); });
 $('#snackTodo').addEventListener('click', () => { S.snack.todo = !S.snack.todo; S.snack.cur = ''; renderSnack(); });
 $('#snackOld').addEventListener('click', () => { S.snack.old = !S.snack.old; S.snack.cur = ''; renderSnack(); });
@@ -2434,6 +2518,9 @@ document.addEventListener('click', async e => {
   else if (act === 'nudgeGo') { NUDGE = 0; Object.assign(S.snack, { l1: '', todo: true, old: true, cur: '' }); go('snack'); }
   else if (act === 'nudgeX') { NUDGE = 0; render(); }
   else if (act === 'more') { S.gran.limit += 60; renderGranary(); }
+  else if (act === 'gClearQ') { S.gran.q = ''; S.gran.limit = 60; renderGranary(); }
+  else if (act === 'gResetF') { Object.assign(S.gran, { l1: '', l2: '', status: 'all', limit: 60 }); renderGranary(); }
+  else if (act === 'gNoteOff') { S.gran.note = false; S.gran.limit = 60; renderGranary(); }
   else if (act === 'pickL1') openL1Picker(b.dataset.for);
   else if (act === 'pickOn') pickMode(true);
   else if (act === 'pickOff') pickMode(false);
