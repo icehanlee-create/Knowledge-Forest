@@ -1,17 +1,16 @@
 <!doctype html>
 <!--
   囤囤の森 — 隨手收藏網路上的影片、文章、貼文
-  版本：v1.8.2（2026-11-23）
+  版本：v1.9.0（2026-11-24）
 
   更新紀錄（最近三版，完整紀錄見規格檔）
+  v1.9.0（2026-11-24）
+    【新增】隱藏分類：選一個主分類，平常裡面的收藏都找不到、看起來是空的；在糧倉搜尋框打密碼按「搜尋」才會出現
+    【新增】顯示模式下，點隱藏的收藏＝複製網址並打開瀏覽器（自己開無痕貼上）；另有「直接打開」鈕；離開 App 超過設定時間或關掉就自動鎖回
   v1.8.2（2026-11-23）
     【調整】搜尋時心得不再自動展開，一律 2 行；關鍵字在後面時，預覽從那一行開始顯示，前面加「…」
   v1.8.1（2026-11-23）
     【調整】搜尋的字在心得 2 行以外時，那則心得自動展開，直接看到標黃的字；拿掉「心得有提到」小標
-  v1.8.0（2026-11-23）
-    【新增】糧倉搜尋：顯示「找到 N 則」、符合的字標黃、只在心得裡找到的加「心得有提到」
-    【新增】找不到時直接給按鈕：清除搜尋／篩選改回全部／關掉有心得
-    【調整】糧倉搜尋時鍵盤右下角變「搜尋」，按了收起鍵盤
 -->
 <html lang="zh-Hant">
 <head>
@@ -19,7 +18,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, interactive-widget=resizes-content">
 <meta name="theme-color" content="#23314F">
 <meta name="description" content="隨手收藏網路上的影片、文章、貼文">
-<title>囤囤の森 v1.8.2</title>
+<title>囤囤の森 v1.9.0</title>
 <link rel="manifest" href="manifest.webmanifest">
 <link rel="icon" href="icon-192.png">
 <link rel="apple-touch-icon" href="icon-192.png">
@@ -303,6 +302,11 @@ mark.q-hit{background:var(--grain3);color:#23314F;border-radius:3px;padding:0 1p
 .gran-count b{color:var(--ink);font-family:'Baloo 2',sans-serif;font-size:15px}
 .empty-acts{display:flex;flex-wrap:wrap;gap:8px;justify-content:center;margin-top:14px}
 .empty-acts .btn{min-height:44px;padding:0 16px;width:auto}
+/* 隱藏分類（v1.9.0） */
+.copy-btn{min-height:32px;padding:0 10px;border-radius:16px;border:1.5px solid var(--leaf);background:transparent;color:var(--leaf);font-size:12px;font-weight:900}
+.lock-chip{color:var(--grain) !important;font-weight:900}
+.hide-info{font-size:14px;line-height:1.6;margin:0 0 10px}
+.hide-info b{color:var(--ink)}
 .note-line.open{display:block;-webkit-line-clamp:unset;overflow:visible}
 .note-more{font-size:12px;color:var(--leaf);font-weight:900;align-self:flex-start}
 /* 糧倉／分類選單 */
@@ -358,6 +362,7 @@ mark.q-hit{background:var(--grain3);color:#23314F;border-radius:3px;padding:0 1p
       <div class="top-row">
         <h1>囤囤の森</h1>
         <div style="display:flex;align-items:center;gap:2px">
+          <button class="sync lock-chip hide" id="lockChip" type="button" aria-label="鎖上，回到隱藏模式">🔓 鎖上</button>
           <button class="sync" id="syncBtn" type="button"><span class="dot" id="syncDot"></span><span id="syncText">只存本機</span></button>
           <button class="ver" type="button" data-act="changelog" id="verBtn">v</button>
         </div>
@@ -448,8 +453,13 @@ mark.q-hit{background:var(--grain3);color:#23314F;border-radius:3px;padding:0 1p
 
 <script>
 'use strict';
-const APP_VERSION = '1.8.2';
+const APP_VERSION = '1.9.0';
 const CHANGELOG = [
+  { v: '1.9.0', d: '2026-11-24', lines: [
+    '【新增】隱藏分類：設定一個主分類和密碼，平常裡面的收藏都找不到、看起來是空的',
+    '【新增】在糧倉搜尋框輸入密碼按「搜尋」進入顯示模式；點隱藏的收藏會複製網址並打開瀏覽器，讓你自己開無痕分頁貼上；要直接開就按「直接打開」',
+    '【新增】離開 App 超過設定時間（預設 5 分鐘）或關掉 App，自動鎖回'
+  ] },
   { v: '1.8.2', d: '2026-11-23', lines: [
     '【調整】搜尋時心得不再自動展開，每則一樣 2 行；關鍵字在後面時，預覽從那一行開始顯示（前面加「…」），標黃的字一定看得到'
   ] },
@@ -623,7 +633,15 @@ if (!S.pref.colsV6) { if (!S.pref.cols || S.pref.cols === '2') S.pref.cols = '3'
 const ONB = Object.assign({ done: false, install: false, demo: false }, load('tt_onb', {}));
 function saveOnb() { save('tt_onb', ONB); }
 const tagsTree = () => (S.shared.tags && Array.isArray(S.shared.tags.value)) ? S.shared.tags.value : [];
-const live = () => S.items.filter(x => !x.deleted);
+const liveAll = () => S.items.filter(x => !x.deleted);   // 全部（含隱藏的）：同步、防重複、改分類用
+/* ---------- 隱藏分類（v1.9.0） ----------
+ * 設定存在 S.shared.hide（會同步）：{ main, salt, hash, ghost }
+ * 鎖著（隱藏模式）時，標了 main（含次分類）的收藏從所有畫面消失；live() 只回傳看得到的 */
+const HIDE = () => { const h = S.shared.hide && S.shared.hide.value; return h && h.main && h.hash ? h : null; };
+let UNLOCKED = false;
+const locked = () => !!HIDE() && !UNLOCKED;
+const inHidden = it => { const h = HIDE(); return !!h && (it.tags || []).some(p => p === h.main || p.indexOf(h.main + SEP) === 0); };
+const live = () => locked() ? liveAll().filter(x => !inHidden(x)) : liveAll();
 const byId = id => S.items.find(x => x.id === id);
 const inboxItems = () => live().filter(x => !(x.tags && x.tags.length)).sort((a, b) => b.savedAt - a.savedAt);
 
@@ -657,6 +675,13 @@ function setTags(tree) {
   persistSync();
   scheduleSync();
 }
+function setHide(v) {
+  S.shared.hide = { value: v, updatedAt: now() };
+  save('tt_shared', S.shared);
+  if (S.sync.dirtySet.indexOf('hide') < 0) S.sync.dirtySet.push('hide');
+  persistSync();
+  scheduleSync();
+}
 function pushRecent(paths) {
   S.recent = paths.concat(S.recent.filter(r => paths.indexOf(r) < 0)).slice(0, 6);
   save('tt_recent', S.recent);
@@ -677,7 +702,7 @@ function cleanTags(sel) { return sel.filter(p => !(p.indexOf(SEP) < 0 && sel.som
 /** 新增一個連結；回傳 { item, dup } */
 function addLink(url, title) {
   const norm = normUrl(url);
-  const dup = live().find(x => x.norm === norm);
+  const dup = liveAll().find(x => x.norm === norm);
   if (dup) return { item: dup, dup: true };
   const p = platOf(url);
   const yid = ytId(url);
@@ -703,6 +728,7 @@ function go(scr) {
 }
 function render() {
   renderBadge();
+  $('#lockChip').classList.toggle('hide', !(UNLOCKED && HIDE()));
   renderSync();
   if (S.screen === 'inbox') renderInbox();
   else if (S.screen === 'granary') renderGranary();
@@ -735,7 +761,8 @@ function rowHtml(it, mode) {
       '<span class="pick" aria-hidden="true">' + (picked ? ICON.tick : '') + '</span>' +
       '<div class="thumb">' + (it.thumb ? '<img src="' + esc(it.thumb) + '" alt="" loading="lazy" referrerpolicy="no-referrer" onerror="this.remove()">' : '') + '<span class="src">' + esc(it.src || p.code) + '</span></div>' +
       '<div class="row-txt"><div class="row-title' + (it.title ? '' : ' empty') + '">' + (it.title ? hlText(label, words) : esc(label)) + '</div>' + note +
-        '<div class="row-meta">' + tags + '<span>' + esc(p.name) + '　' + esc(fmtWhen(it.savedAt)) + '</span></div></div>' +
+        '<div class="row-meta">' + tags + '<span>' + esc(p.name) + '　' + esc(fmtWhen(it.savedAt)) + '</span>' +
+          (mode === 'gran' && UNLOCKED && inHidden(it) ? '<button type="button" class="copy-btn" data-act="openDirect" data-id="' + esc(it.id) + '">直接打開 ↗</button>' : '') + '</div></div>' +
       (it.seen ? '<span class="badge-seen">看過</span>' : '') +
       '<button class="more" type="button" data-act="org" data-id="' + esc(it.id) + '" aria-label="整理這一則">' + ICON.more + '</button>' +
     '</div></div>';
@@ -1170,7 +1197,8 @@ function renderSnack() {
       '<div class="row-meta">' + (it.tags || []).map(t => '<span class="tag">' + esc(t) + '</span>').join('') + '</div>' +
       '<div class="snack-age">' + (age === 0 ? '今天才囤的' : '<b>' + age + '</b>天前囤的') + (it.seen ? '，吃過了' : '，還沒吃') + '</div>' +
       (note ? '<div class="snack-note">' + esc(note) + '</div>' : '') +
-      '<button type="button" class="snack-note-btn" data-act="snackNote" data-id="' + esc(it.id) + '">' + (note ? '✎ 改心得' : '✎ 寫心得') + '</button>' +
+      '<div style="display:flex;gap:8px;flex-wrap:wrap"><button type="button" class="snack-note-btn" data-act="snackNote" data-id="' + esc(it.id) + '">' + (note ? '✎ 改心得' : '✎ 寫心得') + '</button>' +
+        (UNLOCKED && inHidden(it) ? '<button type="button" class="snack-note-btn" style="border-color:var(--leaf);color:var(--leaf);font-weight:900" data-act="openDirect" data-id="' + esc(it.id) + '">直接打開 ↗</button>' : '') + '</div>' +
     '</div>' +
     // 電腦用滑鼠不好滑，保留按鈕；手機用手勢（左右滑換一顆、點縮圖或標題打開）
     (desk ? '<div class="snack-btns"><button type="button" class="btn-big ghost" data-act="reroll"' + (L.length < 2 ? ' disabled style="opacity:.4"' : '') + '>換一顆</button>' +
@@ -1303,13 +1331,156 @@ function renderSettings() {
       '<p class="small" style="margin:10px 0 6px">也可以匯入囤囤の森的備份檔（.json）：</p>' +
       '<input type="file" id="impFile" accept=".json,application/json" aria-label="選擇備份檔"></div>' +
 
+    hideCardHtml() +
     '<div class="card"><h2>備份</h2><p>換手機或清資料前，先匯出一份。</p>' +
-      '<div class="btns"><button type="button" class="btn line" data-act="export">匯出備份（.json）</button></div></div>' +
+      '<div class="btns"><button type="button" class="btn line" data-act="export">匯出備份（.json）</button></div>' +
+      (UNLOCKED && HIDE() ? '<p class="small" style="margin:10px 0 0">現在是顯示模式，會匯出全部（含隱藏的）。鎖上時只會匯出一般收藏，要完整備份請在顯示模式匯出。</p>' : '') + '</div>' +
 
     '<div class="card"><h2>這台裝置</h2><p>清除後，這台裝置的收藏會全部消失（雲端的不會被刪）。</p>' +
       '<div class="btns"><button type="button" class="btn danger" data-act="wipe">清除這台裝置的資料</button></div></div>' +
 
     '<div class="foot"><button type="button" class="ver" style="color:var(--muted)" data-act="changelog">囤囤の森 v' + APP_VERSION + '　看更新內容</button></div>';
+}
+
+/* ================= 隱藏分類（v1.9.0） ================= */
+// 設定區：還沒設定時誰都看得到；設定好之後只有顯示模式才出現
+function hideCardHtml() {
+  const h = HIDE();
+  if (!h) return '<div class="card"><h2>隱藏分類</h2><p>選一個主分類，平常裡面的收藏都找不到，看起來是空的。在糧倉搜尋框輸入密碼按「搜尋」才會出現。</p>' +
+    '<div class="btns"><button type="button" class="btn line" data-act="hideSetup">設定隱藏分類</button></div></div>';
+  if (!UNLOCKED) return '';
+  const m = String(lockMin());
+  return '<div class="card"><h2>隱藏分類（顯示模式中）</h2>' +
+    '<p class="hide-info">隱藏的是「<b>' + esc(h.main) + '</b>」和它底下的次分類。鎖上後，這些收藏在糧倉、搜尋、嗑一顆都找不到，數量顯示 0。<br>要打開：在糧倉搜尋框輸入密碼，按鍵盤的「搜尋」。打錯不會有提示。</p>' +
+    '<div class="btns"><button type="button" class="btn" data-act="hideLock">鎖上</button><button type="button" class="btn line" data-act="hideMain">換分類</button><button type="button" class="btn line" data-act="hidePw">改密碼</button></div>' +
+    '<p class="small" style="margin:12px 0 6px">離開 App 多久自動鎖上（關掉 App 一定會鎖）</p>' +
+    '<div class="seg cols-seg" role="group" aria-label="自動鎖上時間">' + ['1', '5', '15'].map(v =>
+      '<button type="button" class="' + (m === v ? 'on' : '') + '" data-pref="lockMin" data-val="' + v + '" aria-pressed="' + (m === v) + '">' + v + ' 分鐘</button>').join('') + '</div>' +
+    '<div class="btns" style="margin-top:12px"><button type="button" class="btn danger" data-act="hideOff">關掉隱藏功能</button></div></div>';
+}
+const lockMin = () => Number(S.pref.lockMin) || 5;
+async function hashPw(salt, pw) {
+  const txt = salt + '|' + pw;
+  try {
+    const buf = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(txt));
+    return [...new Uint8Array(buf)].map(b => b.toString(16).padStart(2, '0')).join('');
+  } catch (e) {   // 舊瀏覽器沒有 crypto.subtle：退回簡單雜湊
+    let a = 5381, b = 52711;
+    for (let i = 0; i < txt.length; i++) { const c = txt.charCodeAt(i); a = (a * 33) ^ c; b = (b * 31) ^ c; }
+    return 'x' + (a >>> 0).toString(16) + (b >>> 0).toString(16);
+  }
+}
+const newSalt = () => [...crypto.getRandomValues(new Uint8Array(8))].map(b => b.toString(16).padStart(2, '0')).join('');
+// 開關：記在 sessionStorage，關掉 App 就沒了；切到背景時記下時間，回來超過設定分鐘就鎖
+function setUnlocked(on, quiet) {
+  UNLOCKED = !!on;
+  try { if (UNLOCKED) sessionStorage.setItem('tt_unlock', JSON.stringify({ on: 1, hid: 0 })); else sessionStorage.removeItem('tt_unlock'); } catch (e) { /* 略過 */ }
+  if (UNLOCKED) restoreGhosts();
+  if (!quiet) render();
+}
+function lockCheck(visible) {
+  if (!UNLOCKED) return;
+  let st = {};
+  try { st = JSON.parse(sessionStorage.getItem('tt_unlock') || '{}'); } catch (e) { st = {}; }
+  if (!visible) { st.on = 1; st.hid = now(); try { sessionStorage.setItem('tt_unlock', JSON.stringify(st)); } catch (e) { /* 略過 */ } return; }
+  if (st.hid && now() - st.hid > lockMin() * 60000) { closeSheet(); setUnlocked(false); return; }
+  st.hid = 0; try { sessionStorage.setItem('tt_unlock', JSON.stringify(st)); } catch (e) { /* 略過 */ }
+}
+(function restoreUnlock() {
+  try {
+    const st = JSON.parse(sessionStorage.getItem('tt_unlock') || '{}');
+    if (st.on && (!st.hid || now() - st.hid <= lockMin() * 60000)) UNLOCKED = true;
+    else sessionStorage.removeItem('tt_unlock');
+  } catch (e) { /* 略過 */ }
+})();
+/** 糧倉搜尋按「搜尋」時試試看是不是密碼；打錯什麼都不說 */
+async function tryUnlock(q) {
+  const h = HIDE();
+  q = String(q || '').trim();
+  if (!h || UNLOCKED || !q) return;
+  if ((await hashPw(h.salt, q)) !== h.hash) return;
+  S.gran.q = ''; S.gran.limit = 60;
+  setUnlocked(true);
+  toast('🔓 顯示模式');
+}
+function askPw(title, desc) {
+  return new Promise(res => {
+    let done = false;
+    const finish = v => { if (done) return; done = true; res(v); };
+    sheet('<h3>' + esc(title) + '</h3>' + (desc ? '<div class="small" style="margin-top:-6px">' + desc + '</div>' : '') +
+      '<input class="input" id="pw1" type="password" autocomplete="new-password" placeholder="密碼（至少 4 個字）">' +
+      '<input class="input" id="pw2" type="password" autocomplete="new-password" placeholder="再輸入一次" style="margin-top:8px">' +
+      '<div class="small" id="pwMsg" style="color:var(--bad,#C0444C)"></div>' +
+      '<div class="btns"><button type="button" class="btn line" style="flex:1" data-sh="close">取消</button><button type="button" class="btn" style="flex:1" data-sh="ok">好</button></div>',
+      { ok: () => {
+        const a = $('#pw1').value.trim(), b = $('#pw2').value.trim();
+        if (a.length < 4) { $('#pwMsg').textContent = '至少 4 個字'; return; }
+        if (a !== b) { $('#pwMsg').textContent = '兩次不一樣，再輸入一次'; return; }
+        finish(a); closeSheet();
+      } }, () => finish(''));
+    setTimeout(() => { const el = $('#pw1'); if (el) el.focus(); }, 60);
+  });
+}
+async function hideAction(act) {
+  const h = HIDE(), mains = tagsTree().map(t => t.n);
+  if (act === 'hideSetup') {
+    if (!mains.length) { toast('先新增一個主分類'); return; }
+    const A = await pickTarget('要隱藏哪個主分類？', '它底下的次分類也會一起隱藏', mains);
+    if (!A) return;
+    const pw = await askPw('設定密碼', '在糧倉搜尋框輸入這組密碼、按「搜尋」，才會出現隱藏的收藏。忘了就打不開，請記好。');
+    if (!pw) return;
+    const salt = newSalt();
+    setHide({ main: A, salt: salt, hash: await hashPw(salt, pw), ghost: [] });
+    setUnlocked(true);
+    toast('設定好了，現在是顯示模式。按上方「🔓 鎖上」或離開 App 超過 ' + lockMin() + ' 分鐘就會鎖上', [], 6000);
+  } else if (act === 'hideMain' && h) {
+    const A = await pickTarget('改成隱藏哪個主分類？', '目前是「' + h.main + '」', mains.filter(n => n !== h.main));
+    if (!A) return;
+    setHide(Object.assign({}, h, { main: A, ghost: [] }));
+    render(); toast('改成隱藏「' + A + '」');
+  } else if (act === 'hidePw' && h) {
+    const pw = await askPw('改密碼', '');
+    if (!pw) return;
+    const salt = newSalt();
+    setHide(Object.assign({}, h, { salt: salt, hash: await hashPw(salt, pw) }));
+    toast('密碼改好了');
+  } else if (act === 'hideLock') {
+    setUnlocked(false); toast('已鎖上');
+  } else if (act === 'hideOff' && h) {
+    const ok = await askConfirm('關掉隱藏功能？', '「' + esc(h.main) + '」裡的收藏會變成一般收藏，誰都看得到。之後可以再設定。', '關掉', true);
+    if (!ok) return;
+    S.shared.hide = { value: null, updatedAt: now() };
+    save('tt_shared', S.shared);
+    if (S.sync.dirtySet.indexOf('hide') < 0) S.sync.dirtySet.push('hide');
+    persistSync(); scheduleSync();
+    setUnlocked(false); toast('隱藏功能關掉了');
+  }
+}
+const isAndroid = () => /Android/i.test(navigator.userAgent);
+/** 複製網址，再試著打開 Chrome（Android）；打不開就只提示，自己切過去開無痕分頁貼上 */
+async function copyOpen(it) {
+  const ok = await copyText(it.url);
+  if (!ok) { toast('複製不了，請在整理面板按「直接打開」'); return; }
+  if (isAndroid()) {
+    let left = false;
+    const onHide = () => { left = true; };
+    document.addEventListener('visibilitychange', onHide, { once: true });
+    location.href = 'intent://#Intent;action=android.intent.action.MAIN;category=android.intent.category.LAUNCHER;package=com.android.chrome;end';
+    setTimeout(() => { document.removeEventListener('visibilitychange', onHide); if (!left) toast('已複製網址。切到瀏覽器開無痕分頁，貼上就好', [], 5000); }, 1200);
+  } else {
+    toast('已複製網址。按 Ctrl＋Shift＋N（Mac：⌘＋Shift＋N）開無痕視窗，貼上就好', [], 6000);
+  }
+}
+async function copyText(text) {
+  let ok = false;
+  try { await navigator.clipboard.writeText(text); ok = true; } catch (e) {
+    try {
+      const ta = document.createElement('textarea');
+      ta.value = text; ta.setAttribute('readonly', ''); ta.style.cssText = 'position:fixed;opacity:0;top:0';
+      document.body.appendChild(ta); ta.select(); ok = document.execCommand('copy'); ta.remove();
+    } catch (e2) { ok = false; }
+  }
+  return ok;
 }
 
 /* ================= 滑動與點擊 ================= */
@@ -1393,7 +1564,7 @@ function swipeCancel() {
   el.addEventListener('contextmenu', e => { if (e.target.closest('.row-fg')) e.preventDefault(); });
   el.addEventListener('keydown', e => {
     const fg = e.target.closest('.row-fg');
-    if (fg && (e.key === 'Enter' || e.key === ' ')) {
+    if (fg && !e.target.closest('button') && (e.key === 'Enter' || e.key === ' ')) {
       e.preventDefault();
       if (S.pick && fg.parentElement.dataset.mode === 'gran') togglePick(fg.dataset.id, fg.parentElement); else openLink(fg.dataset.id);
     }
@@ -1401,10 +1572,12 @@ function swipeCancel() {
 });
 
 /* ================= 打開連結與回來詢問 ================= */
-function openLink(id) {
+/** 點一下打開連結。隱藏分類的收藏（顯示模式）預設改成「複製網址＋打開瀏覽器」，讓你自己開無痕分頁貼上；direct＝直接打開 */
+function openLink(id, direct) {
   const it = byId(id);
   if (!it) return;
   save('tt_last', { id: id, at: now() });
+  if (!direct && inHidden(it)) { copyOpen(it); return; }
   window.open(it.url, '_blank', 'noopener');
 }
 function checkReturn() {
@@ -1415,7 +1588,7 @@ function checkReturn() {
   localStorage.removeItem('tt_last');
   if (gap > 6 * 3600000) return;
   const it = byId(last.id);
-  if (it && !it.deleted) showPrompt(it);
+  if (it && !it.deleted && !(locked() && inHidden(it))) showPrompt(it);
 }
 function showPrompt(it) {
   closeToast();
@@ -1686,7 +1859,8 @@ function openOrganize(id, opts) {
     '<div class="org-head">' +
       '<div class="org-title-row"><input class="input" id="orgTitle" value="' + esc(it.title) + '" placeholder="' + (it.title ? '標題' : '沒抓到標題，補一句之後才找得到') + '" maxlength="300" aria-label="標題">' +
         '<button type="button" class="icon-btn" data-sh="del" aria-label="刪除這則" title="刪除這則">' + ICON.trash + '</button></div>' +
-      '<div class="org-meta"><span style="flex:none">' + esc(platOf(it.url).name) + '</span><a class="u org-link" href="' + esc(it.url) + '" target="_blank" rel="noopener noreferrer" aria-label="打開連結 ' + esc(it.url) + '">' + esc(it.url) + ' ↗</a>' +
+      '<div class="org-meta"><span style="flex:none">' + esc(platOf(it.url).name) + '</span><a class="u org-link" data-id="' + esc(it.id) + '" href="' + esc(it.url) + '" target="_blank" rel="noopener noreferrer" aria-label="打開連結 ' + esc(it.url) + '">' + esc(it.url) + ' ↗</a>' +
+        (UNLOCKED && inHidden(it) ? '<button type="button" class="link-btn" data-act="openDirect" data-id="' + esc(it.id) + '" style="color:var(--leaf);font-weight:900;flex:none">直接打開</button>' : '') +
         (canRefetch ? '<button type="button" class="link-btn" id="orgRefetch" data-sh="refetch" style="color:var(--leaf);font-weight:900;flex:none">' + (metaQ.indexOf(id) >= 0 || (metaRunning && metaPending(id)) ? '抓取中…' : '↻ 重抓標題') + '</button>' : '') + '</div>' +
     '</div>' +
     '<div class="org-body">' +
@@ -1784,6 +1958,7 @@ function handleIncoming(params) {
   if (title && GENERIC_TITLE.test(title)) title = '';
   const r = addLink(url, title.slice(0, 200));
   go('inbox');
+  if (r.dup && locked() && inHidden(r.item)) { toast('囤好了'); return; }   // 隱藏模式：不透露已經存在隱藏分類裡
   if (r.dup) {
     lastToast = '這則已經囤過了';
     sheet('<h3>這則已經囤過了</h3><div style="font-size:14px;line-height:1.5">' + esc(r.item.title || r.item.url) + '</div>' +
@@ -1927,7 +2102,8 @@ function importUrls(urls) {
   toast('匯入 ' + added + ' 則' + (dup ? '，' + dup + ' 則已經存過' : '') + '，都在待整理');
 }
 function exportBackup() {
-  const data = { app: '囤囤の森', version: APP_VERSION, at: new Date().toISOString(), items: S.items, tags: tagsTree() };
+  // 隱藏模式只匯出一般收藏；顯示模式匯出全部
+  const data = { app: '囤囤の森', version: APP_VERSION, at: new Date().toISOString(), items: locked() ? S.items.filter(x => !inHidden(x)) : S.items, tags: tagsTree() };
   const blob = new Blob([JSON.stringify(data, null, 1)], { type: 'application/json' });
   const a = document.createElement('a');
   const d = new Date();
@@ -2037,10 +2213,11 @@ function tagOp(msg, mutate, mapPath) {
   const tree = JSON.parse(JSON.stringify(oldTree));
   if (mutate(tree) === false) return;
   const oldRecent = S.recent.slice();
+  const oldHide = S.shared.hide ? JSON.parse(JSON.stringify(S.shared.hide.value)) : null;
   const befores = [];
   BATCH = true;
   try {
-    live().forEach(it => {
+    liveAll().forEach(it => {
       const cur = it.tags || [];
       const next = cleanTags([...new Set(cur.map(mapPath).filter(Boolean))]);
       if (JSON.stringify(next) !== JSON.stringify(cur)) {
@@ -2051,11 +2228,49 @@ function tagOp(msg, mutate, mapPath) {
   } finally { BATCH = false; }
   persistItems(); persistSync();
   setTags(tree);
+  // 隱藏的主分類改名／被搬走時，隱藏設定跟著走（避免收藏突然露出來）
+  const h = HIDE();
+  let hideMoved = false;
+  if (h) { const nm = mapPath(h.main); if (nm !== h.main) { setHide(Object.assign({}, h, { main: nm ? nm.split(SEP)[0] : '' })); hideMoved = true; } }
   S.recent = [...new Set(S.recent.map(mapPath).filter(Boolean))]; save('tt_recent', S.recent);
   render();
-  toast(msg + (befores.length ? '，改了 ' + befores.length + ' 則' : ''), [{ label: '復原', fn: () => {
-    setTags(oldTree); S.recent = oldRecent; save('tt_recent', S.recent); restoreMany(befores);
+  const shown = befores.filter(b => !(locked() && inHidden(b))).length;   // 隱藏模式不透露改到隱藏的收藏
+  toast(msg + (shown ? '，改了 ' + shown + ' 則' : ''), [{ label: '復原', fn: () => {
+    setTags(oldTree); S.recent = oldRecent; save('tt_recent', S.recent); if (hideMoved) setHide(oldHide); restoreMany(befores);
   } }], 8000);
+}
+/** 隱藏模式下，對隱藏分類做會讓收藏露出來的動作（刪除、合併、搬走）：
+ *  畫面上照做、提示成功，但收藏不動，分類先收起來記在 ghost，打開顯示模式時放回去 */
+const isHideMain = A => { const h = HIDE(); return locked() && !!h && h.main === A; };
+function fakeOp(msg, A, kid) {
+  const h = HIDE(), oldTree = JSON.parse(JSON.stringify(tagsTree())), oldHide = JSON.parse(JSON.stringify(h));
+  const tree = JSON.parse(JSON.stringify(oldTree)), t = findT(tree, A);
+  if (!t) return;
+  let g;
+  if (kid == null) { g = { n: A, c: t.c.slice(), i: tree.indexOf(t) }; tree.splice(tree.indexOf(t), 1); }
+  else { g = { n: A, k: kid }; t.c.splice(t.c.indexOf(kid), 1); }
+  setTags(tree);
+  setHide(Object.assign({}, h, { ghost: (h.ghost || []).concat([g]) }));
+  render();
+  toast(msg, [{ label: '復原', fn: () => { setTags(oldTree); setHide(oldHide); render(); } }], 8000);
+}
+/** 打開顯示模式時，把隱藏模式下「被刪掉／搬走」的隱藏分類放回去 */
+function restoreGhosts() {
+  const h = HIDE();
+  if (!h || !h.ghost || !h.ghost.length) return;
+  const tree = JSON.parse(JSON.stringify(tagsTree()));
+  h.ghost.forEach(g => {
+    let t = findT(tree, g.n);
+    if (g.k == null) {
+      if (!t) tree.splice(Math.min(g.i || 0, tree.length), 0, { n: g.n, c: g.c.slice() });
+      else g.c.forEach(c => addKid(t, c));
+    } else {
+      if (!t) { t = { n: g.n, c: [] }; tree.push(t); }
+      addKid(t, g.k);
+    }
+  });
+  setTags(tree);
+  setHide(Object.assign({}, h, { ghost: [] }));
 }
 function actionSheet(title, desc, acts) {
   acts = acts.filter(Boolean);
@@ -2134,7 +2349,8 @@ async function demoteMain(A) {
   const t = findT(tagsTree(), A);
   let mode = 'm';
   if (t.c.length) { mode = await askSplit(A, B, t.c); if (!mode) return; }
-  const usedPlain = live().some(it => (it.tags || []).indexOf(A) >= 0);
+  if (isHideMain(A)) { fakeOp('「' + A + '」移到「' + B + '」底下', A); return; }
+  const usedPlain = liveAll().some(it => (it.tags || []).indexOf(A) >= 0);
   tagOp('「' + A + '」移到「' + B + '」底下', tree => {
     const src = findT(tree, A), dst = findT(tree, B);
     tree.splice(tree.indexOf(src), 1);
@@ -2149,6 +2365,7 @@ async function demoteMain(A) {
 async function mergeMain(A) {
   const B = await pickTarget('把「' + A + '」合併到哪個主分類？', '「' + A + '」的收藏和次分類都會搬過去，「' + A + '」這個名字就不留了', tagsTree().map(t => t.n).filter(n => n !== A));
   if (!B) return;
+  if (isHideMain(A)) { fakeOp('「' + A + '」合併到「' + B + '」', A); return; }
   tagOp('「' + A + '」合併到「' + B + '」', tree => {
     const src = findT(tree, A), dst = findT(tree, B);
     tree.splice(tree.indexOf(src), 1);
@@ -2159,6 +2376,7 @@ async function deleteMain(A) {
   const n = countUsing(p => inMain(p, A));
   const ok = await askConfirm('刪除「' + A + '」？', n ? '有 ' + n + ' 則收藏用到它（含次分類），會一起拿掉這個標籤；沒有其他標籤的會回到「待整理」。' : '目前沒有收藏用到它。', '刪除', true);
   if (!ok) return;
+  if (isHideMain(A)) { fakeOp('刪掉「' + A + '」', A); return; }
   tagOp('刪掉「' + A + '」', tree => { tree.splice(tree.indexOf(findT(tree, A)), 1); }, p => inMain(p, A) ? '' : p);
 }
 async function renameKid(A, c) {
@@ -2170,6 +2388,7 @@ async function renameKid(A, c) {
 }
 function promoteKid(A, c) {
   const o = A + SEP + c, exists = !!findT(tagsTree(), c);
+  if (isHideMain(A)) { fakeOp(exists ? '「' + o + '」併進主分類「' + c + '」' : '「' + c + '」升成主分類', A, c); return; }
   tagOp(exists ? '「' + o + '」併進主分類「' + c + '」' : '「' + c + '」升成主分類', tree => {
     const t = findT(tree, A);
     t.c.splice(t.c.indexOf(c), 1);
@@ -2180,6 +2399,7 @@ async function moveKid(A, c) {
   const B = await pickTarget('把「' + c + '」移到哪個主分類底下？', '', tagsTree().map(t => t.n).filter(n => n !== A));
   if (!B) return;
   const o = A + SEP + c;
+  if (isHideMain(A)) { fakeOp('「' + c + '」移到「' + B + '」底下', A, c); return; }
   tagOp('「' + c + '」移到「' + B + '」底下', tree => {
     const t = findT(tree, A); t.c.splice(t.c.indexOf(c), 1);
     addKid(findT(tree, B), c);
@@ -2189,6 +2409,7 @@ async function mergeKid(A, c) {
   const o = A + SEP + c;
   const to = await pickTarget('把「' + o + '」合併到哪個分類？', '收藏會搬過去，「' + c + '」這個次分類就不留了', allPaths().filter(p => p !== o));
   if (!to) return;
+  if (isHideMain(A) && !inMain(to, A)) { fakeOp('「' + o + '」合併到「' + to + '」', A, c); return; }
   tagOp('「' + o + '」合併到「' + to + '」', tree => { const t = findT(tree, A); t.c.splice(t.c.indexOf(c), 1); }, p => p === o ? to : p);
 }
 async function deleteKid(A, c) {
@@ -2375,7 +2596,7 @@ function queueMeta(id, first) {
 const metaPending = id => !!(S.sync.url && navigator.onLine && !S.metaTried[id] && !metaFail[id]);
 async function runMetaQueue() {
   if (metaRunning || !S.sync.url || !navigator.onLine) return;
-  live().forEach(it => { if (!it.title && !S.metaTried[it.id] && !metaFail[it.id] && metaQ.indexOf(it.id) < 0) metaQ.push(it.id); });
+  liveAll().forEach(it => { if (!it.title && !S.metaTried[it.id] && !metaFail[it.id] && metaQ.indexOf(it.id) < 0) metaQ.push(it.id); });
   if (!metaQ.length) return;
   metaRunning = true;
   try {
@@ -2474,8 +2695,9 @@ document.addEventListener('pointercancel', kidDragEnd);
 /* ================= 全域事件 ================= */
 $$('.tabbar button').forEach(b => b.addEventListener('click', () => go(b.dataset.go)));
 $('#syncBtn').addEventListener('click', () => go('settings'));
+$('#lockChip').addEventListener('click', () => { setUnlocked(false); toast('已鎖上'); });
 addClear($('#granQ'));
-$('#granQ').addEventListener('keydown', e => { if (e.key === 'Enter') { e.preventDefault(); e.target.blur(); } });
+$('#granQ').addEventListener('keydown', e => { if (e.key === 'Enter') { e.preventDefault(); e.target.blur(); tryUnlock(e.target.value); } });
 $('#granQ').addEventListener('input', e => { S.gran.q = e.target.value; S.gran.limit = 60; renderGranary(); });
 $('#snackTodo').addEventListener('click', () => { S.snack.todo = !S.snack.todo; S.snack.cur = ''; renderSnack(); });
 $('#snackOld').addEventListener('click', () => { S.snack.old = !S.snack.old; S.snack.cur = ''; renderSnack(); });
@@ -2486,6 +2708,8 @@ document.addEventListener('click', async e => {
   // 面板裡的按鈕按下後畫面可能已經重畫，被換掉的舊按鈕不要再處理一次
   if (!t.isConnected) return;
   let b;
+  // 整理面板的網址：隱藏分類的收藏改成複製網址＋打開瀏覽器
+  if ((b = t.closest('.org-link')) && b.dataset.id) { const it = byId(b.dataset.id); if (it && inHidden(it)) { e.preventDefault(); copyOpen(it); return; } }
   if ((b = t.closest('[data-gl1]'))) { S.gran.l1 = b.dataset.gl1; S.gran.l2 = ''; S.gran.limit = 60; renderGranary(); return; }
   if ((b = t.closest('[data-gl2]'))) { S.gran.l2 = b.dataset.gl2; S.gran.limit = 60; renderGranary(); return; }
   if (t.closest('#granNote')) { S.gran.note = !S.gran.note; S.gran.limit = 60; renderGranary(); return; }
@@ -2518,6 +2742,8 @@ document.addEventListener('click', async e => {
   else if (act === 'nudgeGo') { NUDGE = 0; Object.assign(S.snack, { l1: '', todo: true, old: true, cur: '' }); go('snack'); }
   else if (act === 'nudgeX') { NUDGE = 0; render(); }
   else if (act === 'more') { S.gran.limit += 60; renderGranary(); }
+  else if (act === 'openDirect') openLink(b.dataset.id, true);
+  else if (act.indexOf('hide') === 0) hideAction(act);
   else if (act === 'gClearQ') { S.gran.q = ''; S.gran.limit = 60; renderGranary(); }
   else if (act === 'gResetF') { Object.assign(S.gran, { l1: '', l2: '', status: 'all', limit: 60 }); renderGranary(); }
   else if (act === 'gNoteOff') { S.gran.note = false; S.gran.limit = 60; renderGranary(); }
@@ -2555,7 +2781,7 @@ document.addEventListener('click', async e => {
       toast('網址看起來不對，應該是 https://script.google.com/macros/s/…/exec');
     }
     S.sync.since = 0;
-    S.sync.dirty = [...new Set(S.sync.dirty.concat(live().map(x => x.id)))];
+    S.sync.dirty = [...new Set(S.sync.dirty.concat(liveAll().map(x => x.id)))];
     persistSync();
     if (!S.sync.url) { renderSettings(); renderSync(); toast('已改回只存本機，通行碼也從這台裝置清掉了'); return; }
     $('#connMsg').textContent = '測試中…';
@@ -2573,7 +2799,7 @@ document.addEventListener('click', async e => {
   else if (act === 'impPreview') {
     const urls = extractUrls($('#impText').value);
     const uniq = [...new Set(urls.map(normUrl))];
-    const have = uniq.filter(n => live().some(x => x.norm === n)).length;
+    const have = uniq.filter(n => liveAll().some(x => x.norm === n)).length;
     IMP = urls;
     if (!urls.length) { $('#impMsg').textContent = '找不到連結（要以 http 開頭）'; return; }
     $('#impMsg').innerHTML = '找到 ' + uniq.length + ' 個連結' + (have ? '，其中 ' + have + ' 個已經存過' : '') +
@@ -2585,6 +2811,7 @@ document.addEventListener('click', async e => {
     const ok = await askConfirm('清除這台裝置的資料？', '這台裝置上的 ' + live().length + ' 則收藏、標籤與設定都會清掉。' + (S.sync.url ? '雲端試算表裡的不會被刪，之後重新填網址就能同步回來。' : '<b>你沒有設定雲端，清掉就找不回來了，建議先匯出備份。</b>'), '清除', true);
     if (!ok) return;
     ['tt_items', 'tt_shared', 'tt_pref', 'tt_sync', 'tt_recent', 'tt_meta', 'tt_last', 'tt_onb', 'tt_nudge'].forEach(k => localStorage.removeItem(k));
+    try { sessionStorage.removeItem('tt_unlock'); } catch (err) { /* 略過 */ }
     location.reload();
   }
 });
@@ -2607,6 +2834,7 @@ function applyTheme() {
 }
 
 document.addEventListener('visibilitychange', () => {
+  lockCheck(document.visibilityState === 'visible');   // 先判斷要不要鎖，再決定要不要問「看完了嗎」
   if (document.visibilityState === 'visible') {
     checkReturn();
     checkNudge();
